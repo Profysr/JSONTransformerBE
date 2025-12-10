@@ -1,6 +1,7 @@
+import { CONFIG } from "../lib/ConfigRULES.js";
 import { transformData } from "../services/mapperService.js";
 
-export const processTransformation = (inputData) => {
+export const processTransformation = ({ inst_id, letter_type, inputData }) => {
   // --- 1. Input Validation ---
   if (
     !inputData ||
@@ -18,18 +19,39 @@ export const processTransformation = (inputData) => {
   }
 
   try {
-    const output = transformData(inputData);
+    /** find configuration rules for the instance and letter type */
+    const configRules = CONFIG.filter((config) => {
+      return (
+        config.client_id === inst_id && config.letter_type_from === letter_type
+      );
+    });
 
-    // We'll check if the resulting 'is_rpa_check_fond' field is the kill signal
-    // if (output.is_rpa_check_fond === "<<kill>>") {
-    //   return {
-    //     status: "killed",
-    //     ok: false,
-    //     message:
-    //       "Transformation terminated: RPA note check triggered a kill signal.",
-    //     output: output,
-    //   };
-    // }
+    if (configRules.length === 0) {
+      return {
+        status: "error",
+        ok: false,
+        message: `No configuration rules found for inst_id: ${inst_id} and letter_type: ${letter_type}`,
+        output: {},
+      };
+    }
+
+    /** pass the inputData and rules to transformData function */
+    const output = transformData(inputData, configRules[0]);
+
+    /** if kill property found, then storing it with output */
+    if (output && output.isKilled === true) {
+      output.data["killStatus"] = {
+        isKilled: output.isKilled,
+        sourceField: output.sourceField,
+      };
+
+      return {
+        status: "killed",
+        ok: false,
+        message: `Transformation terminated by rule applied to ${output.sourceField}. The resulting value is retained.`,
+        output: output.data,
+      };
+    }
 
     return {
       status: "success",

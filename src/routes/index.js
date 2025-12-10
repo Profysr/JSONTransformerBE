@@ -12,11 +12,19 @@ router.get("/", (req, res) => {
   });
 });
 
-router.post("/transform", (req, res) => {
+router.post("/transform/:inst_id/:letter_type", (req, res) => {
   try {
+    /** Extracting Slug and body from request */
+    const { inst_id, letter_type } = req.params;
     const inputData = req.body;
+    // console.log("Received Req:", { inst_id, letter_type, inputData });
 
-    const result = processTransformation(inputData);
+    /** send the input data and slug to the transformation */
+    const result = processTransformation({
+      inst_id,
+      letter_type,
+      inputData,
+    });
     return res.status(200).json(result);
   } catch (error) {
     console.error("Route Handler Error:", error);

@@ -4,15 +4,14 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "dev": "nodemon"
+    "start": "node src/app.js",
+    "dev": "node --watch --env-file=.env src/app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "nodemon": "^3.1.11"
+    "express": "^5.1.0"
   }
 }

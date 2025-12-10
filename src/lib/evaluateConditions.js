@@ -38,8 +38,6 @@ export function evaluateCondition(inputData, condition) {
       return sourceStr.length === 0;
     case "not_empty":
       return sourceStr.length > 0;
-    // You would add more comparison operators here (e.g., 'starts_with', 'greater_than', 'less_than')
-    // For numeric comparisons, you would need to parse sourceValue and targetValue to numbers.
     default:
       console.warn(
         `[WARNING] Unknown operator: ${condition.operator}. Using 'equals' as default.`
