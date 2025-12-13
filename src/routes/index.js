@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { processTransformation } from "../controllers/transformationController.js";
+import logger from "../lib/logger.js";
 
 const router = Router();
 
@@ -17,7 +18,8 @@ router.post("/transform/:inst_id/:letter_type", (req, res) => {
     /** Extracting Slug and body from request */
     const { inst_id, letter_type } = req.params;
     const inputData = req.body;
-    // console.log("Received Req:", { inst_id, letter_type, inputData });
+
+    logger.info("Received Req with these parameters:", { inst_id, letter_type, nhsid: inputData.nhs_id || null, letter_id: inputData.letter_id || null, });
 
     /** send the input data and slug to the transformation */
     const result = processTransformation({

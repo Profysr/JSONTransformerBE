@@ -1,38 +1,22 @@
-{
-  "status": "killed",
-  "ok": false,
-  "message": "Transformation terminated by rule applied to letter_type. The resulting value is retained.",
-  "output": {
-    "nhs_id": "4420948582",
-    "letter_id": "6214b424233a4afcbdd3efc4454b0bee",
-    "letter_codes": "XaKqd",
-    "letter_codes_list": [
-      {
-        "id": 180749,
-        "child": "XaKqd",
-        "snomed_code": "198291000000105",
-        "c_term": "Letter received",
-        "qof": false,
-        "qof_flags": [],
-        "code_type": null,
-        "comments": null,
-        "read_code_date": null
-      }
-    ],
-    "file_name": "130-4420948582-09 Aug 2025",
-    "file_sha256": "a32f91e8712a079ce2905628c05c052e4d60df2072d61c642b75f0c91ab9f016",
-    "imgs_sha256": [
-      "75357dbf9ac915a3641b401f644a36fb827600f86eb33ba23c4a4487042fd8d4"
-    ],
-    "approval_date": "09/08/2025 10:04:05",
-    "approved_by": "halima.b@kynoby.com",
-    "letter_type": "Breast Clinic",
-    "letter_date": "07-08-2025",
-    "hospital_name": "NHS Breast Screening Programme",
-    "incident_date": "07-08-2025",
-    "killStatus": {
-      "isKilled": true,
-      "sourceField": "letter_type"
-    }
+[
+  {
+    "level": "info",
+    "message": "Input validation passed",
+    "timestamp": "2025-12-10 16:04:44"
+  },
+  {
+    "level": "info",
+    "message": "Searching for configuration rules: inst_id=ugp_0001, letter_type=Breast Clinic",
+    "timestamp": "2025-12-10 16:04:44"
+  },
+  {
+    "level": "info",
+    "message": "configuration rules found. Here they are: [{\"client_id\":\"ugp_0001\",\"letter_type_from\":\"Breast Clinic\",\"letter_type_configuration\":{\"letter_type\":{\"type\":\"cascading-advanced\",\"clauses\":[{\"rootLogicType\":\"AND\",\"rules\":[{\"id\":\"09b8f36c-364f-43b2-a7bb-ced6fd9b3b68\",\"type\":\"condition\",\"field\":\"hospital_name\",\"operator\":\"contains\",\"value\":\"NHS Breast Screening Programme\",\"caseSensitive\":false}],\"thenValue\":\"Mammogram\",\"isKilled\":true}],\"elseValue\":\"var(letter_type)\",\"isKilled\":false},\"letter_date\":\"var(incident_date)\"},\"readCodes\":{\"add_readcodes\":true,\"add_date_readcodes\":true,\"date_type_readcodes\":\"letter_date\",\"attach_to_problems\":false,\"create_problems\":false,\"add_endDate_problem\":false},\"forward_letter\":{\"fileaway\":true,\"send_task\":false,\"choose_flag\":false}}]",
+    "timestamp": "2025-12-10 16:04:44"
+  },
+  {
+    "level": "warn",
+    "message": "Transformation killed by rule on field: letter_type",
+    "timestamp": "2025-12-10 16:04:44"
   }
-}
+]

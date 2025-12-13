@@ -1,3 +1,5 @@
+import logger from "./logger.js";
+
 /**
  * Executes a single rule condition against the input data.
  */
@@ -8,8 +10,8 @@ export function evaluateCondition(inputData, condition) {
   const sourceValue = inputData[condition.field];
 
   if (sourceValue === undefined) {
-    console.warn(`Source field ${condition.field} not found in input data.`);
-    // throw new Error(`Source field ${condition.field} not found in input data.`);
+    logger.warn(`JSON field ${condition.field} is not found in input data.`);
+    return false;
   }
 
   // Prepare values for comparison based on case sensitivity flag
@@ -19,6 +21,10 @@ export function evaluateCondition(inputData, condition) {
   const targetStr = condition.case_sensitive
     ? String(condition.value)
     : String(condition.value).toLowerCase();
+
+  logger.info(
+    `Condition defined in rules is: ${condition.field} ${condition.operator} ${condition.value} and the input value is ${sourceStr}`
+  );
 
   // Evaluate based on the defined operator
   switch (condition.operator) {
@@ -39,8 +45,8 @@ export function evaluateCondition(inputData, condition) {
     case "not_empty":
       return sourceStr.length > 0;
     default:
-      console.warn(
-        `[WARNING] Unknown operator: ${condition.operator}. Using 'equals' as default.`
+      logger.error(
+        `Unknown operator: ${condition.operator}. Using 'equals' as default.`
       );
       throw new Error(`Unknown operator: ${condition.operator}`);
   }

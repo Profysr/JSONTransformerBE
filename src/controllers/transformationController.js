@@ -1,4 +1,5 @@
 import { CONFIG } from "../lib/ConfigRULES.js";
+import logger from "../lib/logger.js";
 import { transformData } from "../services/mapperService.js";
 
 export const processTransformation = ({ inst_id, letter_type, inputData }) => {
@@ -8,7 +9,7 @@ export const processTransformation = ({ inst_id, letter_type, inputData }) => {
     typeof inputData !== "object" ||
     Object.keys(inputData).length === 0
   ) {
-    console.warn("Transformation rejected: Invalid or empty input data.");
+    logger.error("Input Validaion failed", JSON.stringify(inputData));
     return {
       status: "error",
       ok: false,
@@ -18,8 +19,13 @@ export const processTransformation = ({ inst_id, letter_type, inputData }) => {
     };
   }
 
+  logger.info("Input validation passed");
   try {
     /** find configuration rules for the instance and letter type */
+    logger.info(
+      `Searching for configuration rules: inst_id=${inst_id}, letter_type=${letter_type}`
+    );
+
     const configRules = CONFIG.filter((config) => {
       return (
         config.client_id === inst_id && config.letter_type_from === letter_type
@@ -27,6 +33,7 @@ export const processTransformation = ({ inst_id, letter_type, inputData }) => {
     });
 
     if (configRules.length === 0) {
+      logger.error(`No configuration rules found`);
       return {
         status: "error",
         ok: false,
@@ -35,6 +42,7 @@ export const processTransformation = ({ inst_id, letter_type, inputData }) => {
       };
     }
 
+    logger.info(`Found ${configRules.length} configuration rules`);
     /** pass the inputData and rules to transformData function */
     const output = transformData(inputData, configRules[0]);
 
@@ -61,7 +69,7 @@ export const processTransformation = ({ inst_id, letter_type, inputData }) => {
       output: output,
     };
   } catch (error) {
-    console.error("Transformation Execution Error:", error);
+    logger.error("Transformation Execution Error:", error);
     return {
       status: "error",
       ok: false,

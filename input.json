@@ -25,5 +25,6 @@
   "letter_type": "Breast Clinic",
   "letter_date": "07-08-2025",
   "hospital_name": "NHS Breast Screening Programme",
+  "department":"Breast Screening",
   "incident_date": "07-08-2025"
 }
