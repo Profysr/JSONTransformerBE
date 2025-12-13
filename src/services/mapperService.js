@@ -2,37 +2,65 @@ import { evaluateCondition } from "../lib/evaluateConditions.js";
 import logger from "../lib/logger.js"; // Import your logger
 
 /**
+ * Helper to evaluate a list of rules based on logic type (AND/OR).
+ */
+/**
+ * Helper to evaluate a list of rules based on logic type (AND/OR).
+ */
+const evaluateRuleList = (data, rules, logicType, ruleKey) => {
+  if (!rules || rules.length === 0) { 
+    logger.error(`[${ruleKey}] No rules found for key: ${ruleKey}`); 
+    return false 
+  }; // Empty rules? Assume true or handle differently.
+
+  const result = logicType === "OR"
+    ? rules.some((rule) => evaluateRuleRecursive(data, rule, ruleKey))
+    : rules.every((rule) => evaluateRuleRecursive(data, rule, ruleKey));
+
+  return result;
+};
+
+/**
+ * Recursive function to evaluate a single rule or a group of rules.
+ */
+const evaluateRuleRecursive = (data, rule, ruleKey) => {
+  if (rule?.type === "group") {
+    logger.info(`[${ruleKey}] Evaluating Group (Logic: ${rule.logicType})`);
+    return evaluateRuleList(data, rule.rules, rule.logicType, ruleKey);
+  }
+
+  // Otherwise, treat as a condition
+  const conditionId = rule.id || 'unknown-id';
+  const result = evaluateCondition(data, rule);
+  logger.info(`[${ruleKey}] Condition ${conditionId} (${rule.field} ${rule.operator} ${rule.value}) result: ${result}`);
+  return result;
+};
+
+/**
  * Evaluates a cascading-advanced configuration against the input data.
  */
 const evaluateCascadingAdvanced = (data, config, ruleKey) => {
-  for (const clause of config.clauses) {
-    let rulesMatch = false;
-    let logicTypeApplied = clause.rootLogicType;
+  for (const [index, clause] of config.clauses.entries()) {
 
-    if (clause.rules.length === 1) {
-      rulesMatch = evaluateCondition(data, clause.rules[0]);
-      logicTypeApplied = "SINGLE_RULE";
-    }
+    logger.info(`[${ruleKey}] Evaluating Clause ${index + 1} (RootLogic: ${clause.rootLogicType})`);
 
-    if (clause.rules.length !== 1) {
-      if (clause.rootLogicType === "AND") {
-        rulesMatch = clause.rules.every((rule) => evaluateCondition(data, rule));
-      } else if (clause.rootLogicType === "OR") {
-        rulesMatch = clause.rules.some((rule) => evaluateCondition(data, rule));
-      }
-    }
+    let rulesMatch = evaluateRuleList(data, clause.rules, clause.rootLogicType, ruleKey);
 
     if (rulesMatch) {
       let isKilled = clause.isKilled === true;
 
       logger.info(
-        `CASCADING_ADVANCED_CONDITION_SATISFIED: Rule '${ruleKey}' matched with logic type '${logicTypeApplied}'.`
+        `CASCADING_ADVANCED_CONDITION: Rule '${ruleKey}' MATCHED at Clause ${index + 1}.`
       );
 
       return {
         value: clause.thenValue,
         isKilled,
       };
+    } else {
+      logger.info(
+        `CASCADING_ADVANCED_CONDITION: Rule '${ruleKey}' NOT MATCHED at Clause ${index + 1}.`
+      );
     }
   }
 
@@ -63,7 +91,6 @@ const applyRule = (data, ruleValue, ruleKey) => {
     const result = evaluateCascadingAdvanced(data, ruleValue, ruleKey);
 
     if (result.isKilled) {
-      // logger.warn(`Rule killed for key: ${ruleKey}, value: ${result.value}`);
       return { value: result.value, isKilled: true };
     }
     return result.value;

@@ -15,14 +15,11 @@ const consoleFormat = printf(
   }
 );
 
-// Determine transports based on environment
 const transports = [];
 
 // In Development: Console + File
 // In Production: (As per user request, we can keep it dynamic or restrict it. 
 // For now, adhering to "dev only -> console + file" as primary instruction implies 
-// we might want less verbose or different logging in prod, but let's stick to the plan:
-// "make it dynamically as when the project is under dev only, then use console and file structure.")
 
 if (process.env.NODE_ENV !== 'production') {
     transports.push(
@@ -38,8 +35,7 @@ if (process.env.NODE_ENV !== 'production') {
         })
     );
 } else {
-    // Production configuration example (user said "future backend server")
-    // For now, we can just log to console JSON for standard stdout collection services like CloudWatch/Datadog
+    // Production configuration
     transports.push(
         new winston.transports.Console({
             level: "info",
