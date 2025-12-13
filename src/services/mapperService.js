@@ -1,9 +1,6 @@
 import { evaluateCondition } from "../lib/evaluateConditions.js";
-import logger from "../lib/logger.js"; // Import your logger
+import logger from "../lib/logger.js";
 
-/**
- * Helper to evaluate a list of rules based on logic type (AND/OR).
- */
 /**
  * Helper to evaluate a list of rules based on logic type (AND/OR).
  */
@@ -31,7 +28,7 @@ const evaluateRuleRecursive = (data, rule, ruleKey) => {
 
   // Otherwise, treat as a condition
   const conditionId = rule.id || 'unknown-id';
-  const result = evaluateCondition(data, rule);
+  const result = evaluateCondition(data, rule, ruleKey);
   logger.info(`[${ruleKey}] Condition ${conditionId} (${rule.field} ${rule.operator} ${rule.value}) result: ${result}`);
   return result;
 };
@@ -50,7 +47,7 @@ const evaluateCascadingAdvanced = (data, config, ruleKey) => {
       let isKilled = clause.isKilled === true;
 
       logger.info(
-        `CASCADING_ADVANCED_CONDITION: Rule '${ruleKey}' MATCHED at Clause ${index + 1}.`
+        `[${ruleKey}] Rule MATCHED at Clause ${index + 1}.`
       );
 
       return {
@@ -59,14 +56,14 @@ const evaluateCascadingAdvanced = (data, config, ruleKey) => {
       };
     } else {
       logger.info(
-        `CASCADING_ADVANCED_CONDITION: Rule '${ruleKey}' NOT MATCHED at Clause ${index + 1}.`
+        `[${ruleKey}] Rule NOT MATCHED at Clause ${index + 1}.`
       );
     }
   }
 
   const isKilledByElse = config.isKilled === true;
   logger.info(
-    `No condition satisfied for key ${ruleKey}, using elseValue.`
+    `[${ruleKey}] No condition satisfied, using elseValue - ${config.elseValue}.`
   );
   return {
     value: config.elseValue,
@@ -84,9 +81,7 @@ const applyRule = (data, ruleValue, ruleKey) => {
     ruleValue !== null &&
     ruleValue.type === "cascading-advanced"
   ) {
-    logger.info(
-      `Evaluating cascading-advanced condition rule for key: ${ruleKey}`
-    );
+    logger.info(`[${ruleKey}] Evaluating cascading-advanced condition rule`);
 
     const result = evaluateCascadingAdvanced(data, ruleValue, ruleKey);
 
@@ -101,15 +96,13 @@ const applyRule = (data, ruleValue, ruleKey) => {
     const varMatch = ruleValue.match(/^var\((.+)\)$/);
     if (varMatch && varMatch[1]) {
       const sourceField = varMatch[1];
-      logger.info(
-        `Mapping ${ruleKey} using ${sourceField}`
-      );
+      logger.info(`[${ruleKey}] Mapping ${ruleKey} using ${sourceField}`);
       return data[sourceField];
     }
   }
 
-  // 3. Return the ruleValue as is
-  logger.info(`Adding '${ruleKey}' using static value: '${ruleValue}' in JSON`);
+  // 3. Return the ruleValue as it is
+  logger.info(`Adding '${ruleKey}' using static value: '${ruleValue}'`);
   return ruleValue;
 };
 
@@ -138,7 +131,7 @@ export const transformData = (input, configRules) => {
         derivedValue.isKilled === true
       ) {
         logger.error(
-          `Transformation killed at field: ${fieldKey}, killValue: ${derivedValue.value}`
+          `[${fieldKey}] Transformation killed at field: ${fieldKey}, killValue: ${derivedValue.value}`
         );
         return {
           isKilled: true,

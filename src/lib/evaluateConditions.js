@@ -3,14 +3,16 @@ import logger from "./logger.js";
 /**
  * Executes a single rule condition against the input data.
  */
-export function evaluateCondition(inputData, condition) {
+export function evaluateCondition(inputData, condition, ruleKey) {
   /**
    * sourceValue: The value from the input data based on the condition's field
    */
   const sourceValue = inputData[condition.field];
 
   if (sourceValue === undefined) {
-    logger.warn(`JSON field ${condition.field} is not found in input data.`);
+    logger.error(
+      `[${ruleKey}] JSON field ${condition.field} is not found in input data.`
+    );
     return false;
   }
 
@@ -23,7 +25,7 @@ export function evaluateCondition(inputData, condition) {
     : String(condition.value).toLowerCase();
 
   logger.info(
-    `Condition defined in rules is: ${condition.field} ${condition.operator} ${condition.value} and the input value is ${sourceStr}`
+    `[${ruleKey}] Condition defined in rules is: ${condition.field} ${condition.operator} ${condition.value} and the input value is ${sourceStr}`
   );
 
   // Evaluate based on the defined operator

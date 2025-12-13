@@ -108,7 +108,7 @@ export const CONFIG = [
           }
         ],
         "elseValue": "false",
-        "isKilled": false
+        "isKilled": true
       },
       letter_date: "var(incident_date)",
     },
