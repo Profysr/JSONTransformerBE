@@ -1,4 +1,4 @@
-import { CONFIG } from "../lib/ConfigRULES.js";
+import { CONFIG } from "../global/ConfigRULES.js";
 import logger from "../lib/logger.js";
 import { transformData } from "../services/mapperService.js";
 
