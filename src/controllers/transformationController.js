@@ -28,7 +28,7 @@ export const processTransformation = ({ inst_id, letter_type, inputData }) => {
 
     const configRules = CONFIG.filter((config) => {
       return (
-        config.client_id === inst_id && config.letter_type_from === letter_type
+        config.client_id.toLowerCase().trim() === inst_id && config.letter_type_from.toLowerCase().trim() === letter_type
       );
     });
 

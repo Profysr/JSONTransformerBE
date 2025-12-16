@@ -1,73 +1,15 @@
-// import winston from "winston";
-
-// const { combine, timestamp, json, errors, colorize, printf } = winston.format;
-
-// // 1. Define the custom console format for human readability
-// const consoleFormat = printf(
-//   ({ level, message, timestamp, stack, ...meta }) => {
-//     const base = `${timestamp} [${level}]: ${stack || message}`;
-
-//     // Append any extra context (meta data) to the log line
-//     if (Object.keys(meta).length > 0) {
-//       return `${base} | Meta: ${JSON.stringify(meta, null, 2)}`;
-//     }
-//     return base;
-//   }
-// );
-
-// const transports = [];
-
-// // In Development: Console + File
-// // In Production: (As per user request, we can keep it dynamic or restrict it.
-// // For now, adhering to "dev only -> console + file" as primary instruction implies
-
-// if (process.env.NODE_ENV !== 'production') {
-//     transports.push(
-//         new winston.transports.Console({
-//             level: "debug",
-//             format: combine(colorize({ all: true }), consoleFormat),
-//         })
-//     );
-//     transports.push(
-//         new winston.transports.File({
-//             filename: "logs/structured.log",
-//             level: "info",
-//         })
-//     );
-// } else {
-//     // Production configuration
-//     transports.push(
-//         new winston.transports.Console({
-//             level: "info",
-//             format: json(),
-//         })
-//     );
-// }
-
-// // --- Configuration ---
-// const logger = winston.createLogger({
-//   level: "info",
-//   format: combine(
-//     errors({ stack: true }),
-//     timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-//     json()
-//   ),
-//   transports: transports,
-// });
-
-// export default logger;
-
 /**
- * A streamlined custom logger controlled by environment mode.
- * * Behavior based on process.env.NODE_ENV:
- * 1. DEV MODE: Logs output immediately to the console only. Buffer is ignored.
- * 2. PROD MODE: Logs are stored in a buffer and sent to the backend
- * in a single batch via .flushHttp(). Console is used for structured logging.
+ * 1. Both DEV/PROD MODE: Logs output immediately to the console in their respective format.
+ * 2. PROD MODE: Logs are also stored in a buffer and sent to the backend
  */
+
+import { getAccessToken } from "../auth/index.js";
+
 class BatchLogger {
   constructor() {
     this.logBuffer = [];
-    this.isProduction = process.env.NODE_ENV === "production";
+    this.isProduction =
+      process.env.NODE_ENV.toLowerCase() === "production" || false;
     this.verbose = process.env.verbose || true;
 
     console.log(
@@ -77,39 +19,37 @@ class BatchLogger {
     );
   }
 
-  /**
-   * Creates the structured log object.
-   */
   _formatLog(level, message, meta) {
     const logEntry = {
-      timestamp: new Date().toISOString(),
       level: level,
       message: message,
-      ...meta,
+      meta: JSON.stringify({ ...meta }),
     };
 
-    // Handle error objects if passed in meta
+    // Handle error objects if passed in meta for console output
     if (meta && meta.err instanceof Error) {
       logEntry.stack = meta.err.stack;
-      delete logEntry.err;
     }
 
     return logEntry;
   }
 
   /**
-   * Handles immediate console output.
+   * Handles immediate console output for both environments.
    */
   _logToConsole(logEntry) {
     if (this.isProduction) {
-      console.log(JSON.stringify(logEntry));
+      // Production: Output a concise, stringified version
+      const { level, message, meta } = logEntry;
+      console.log(JSON.stringify({ level, message, meta: JSON.parse(meta) }));
     } else {
       // Development: Output human-readable format
-      const { timestamp, level, message, stack, ...meta } = logEntry;
-      let base = `${timestamp} [${level.toUpperCase()}]: ${stack || message}`;
+      const { level, message, stack, meta } = logEntry;
+      let base = `[${level.toUpperCase()}]: ${stack || message}`;
+      const metaObj = JSON.parse(meta);
 
-      if (Object.keys(meta).length > 0) {
-        base += ` | Meta: ${JSON.stringify(meta)}`;
+      if (Object.keys(metaObj).length > 0) {
+        base += ` | Meta: ${JSON.stringify(metaObj)}`;
       }
       console.log(base);
     }
@@ -118,22 +58,25 @@ class BatchLogger {
   /**
    * The main logging function.
    */
-  log(level, message, meta) {
-    // Suppress debug logs unless verbose mode is enabled
+  log(level, message, meta = {}) {
     if (level === "debug" && !this.verbose) {
       return;
     }
 
     const logEntry = this._formatLog(level, message, meta);
 
+    this._logToConsole(logEntry);
+
+    // 2. Buffer the log ONLY in Production mode
     if (this.isProduction) {
-      this.logBuffer.push(logEntry);
-    } else {
-      this._logToConsole(logEntry);
+      const bufferEntry = {
+        level: logEntry.level,
+        message: logEntry.message,
+        meta: logEntry.meta, // Already stringified
+      };
+      this.logBuffer.push(bufferEntry);
     }
   }
-
-  // --- Level-Specific Wrappers ---
 
   info(message, meta) {
     this.log("info", message, meta);
@@ -149,15 +92,12 @@ class BatchLogger {
   }
 
   /**
-   * Sends the entire accumulated log buffer to a backend endpoint
-   * in a single HTTP request and then clears the buffer.
-   * This method should only be called in Production mode.
+   * Sends the accumulated log buffer to a backend endpoint.
    */
-
-  async flushHttp(endpointUrl) {
+  async sendLogs(endpointUrl, letter_type, nhs_id, img_hashes) {
     if (!this.isProduction) {
       console.warn(
-        "BatchLogger: flushHttp called in DEVELOPMENT mode. No action taken."
+        "BatchLogger: sendLogs called in DEVELOPMENT mode. No action taken."
       );
       return;
     }
@@ -167,8 +107,24 @@ class BatchLogger {
       return;
     }
 
-    const logsToSend = this.logBuffer;
+    // Validate required contextual data
+    if (!letter_type || !nhs_id) {
+      console.error(
+        "BatchLogger: Missing required contextual data (letter_type or nhs_id). Logs retained."
+      );
+      return;
+    }
 
+    // Prepare the new payload structure
+    const logsToSend = this.logBuffer;
+    const payload = {
+      letter_type: letter_type,
+      nhs_id: nhs_id,
+      img_hashes: img_hashes || "",
+      process_logs: logsToSend,
+    };
+
+    // Clear the buffer immediately before the network call
     this.logBuffer = [];
 
     let success = false;
@@ -178,24 +134,33 @@ class BatchLogger {
     // --- Retry Loop ---
     for (let i = 1; i <= MAX_ATTEMPTS; i++) {
       try {
+        /** Invoke access token in the loop because everytime, we want to make sure the token is valid */
+        const accessToken = await getAccessToken("shary_prod");
         const response = await fetch(endpointUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(logsToSend),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(payload),
         });
 
-        // 3. Check for successful HTTP status codes (2xx)
+        // Check for successful HTTP status codes (2xx)
         if (response.ok) {
           console.log("BatchLogger: Logs successfully flushed via HTTP.");
           success = true;
           break;
         }
+
+        console.log("response is not ok", response);
+
         lastError = new Error(`HTTP status failure: ${response.status}`);
       } catch (error) {
         lastError = error;
       }
 
-      // 4. Log the failed i, but only retry if we haven't hit the max attempts
+      throw new Error("Req failed", lastError);
+      // Log the failed i, but only retry if we haven't hit the max attempts
       if (!success && i < MAX_ATTEMPTS) {
         console.warn(
           `Logger: Attempt ${i} failed (${lastError.message}). Retrying in 3 second...`
@@ -205,7 +170,7 @@ class BatchLogger {
     }
     // --- End of Retry Loop ---
 
-    // 5. Final check after the loop finishes
+    // Final check after the loop finishes
     if (!success) {
       console.error(
         `Logger: All ${MAX_ATTEMPTS} attempts failed. Final error: ${lastError.message}. Logs retained for next scheduled http.`
