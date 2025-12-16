@@ -23,7 +23,7 @@ class BatchLogger {
     const logEntry = {
       level: level,
       message: message,
-      meta: JSON.stringify({ ...meta }),
+      meta: { ...meta },
     };
 
     // Handle error objects if passed in meta for console output
@@ -41,7 +41,7 @@ class BatchLogger {
     if (this.isProduction) {
       // Production: Output a concise, stringified version
       const { level, message, meta } = logEntry;
-      console.log(JSON.stringify({ level, message, meta: JSON.parse(meta) }));
+      console.log(JSON.stringify({ level, message, meta }));
     } else {
       // Development: Output human-readable format
       const { level, message, stack, meta } = logEntry;
@@ -72,8 +72,12 @@ class BatchLogger {
       const bufferEntry = {
         level: logEntry.level,
         message: logEntry.message,
-        meta: logEntry.meta, // Already stringified
       };
+
+      if (Object.keys(logEntry.meta).length > 0) {
+        bufferEntry["meta"] = logEntry.meta;
+      }
+
       this.logBuffer.push(bufferEntry);
     }
   }
@@ -94,7 +98,7 @@ class BatchLogger {
   /**
    * Sends the accumulated log buffer to a backend endpoint.
    */
-  async sendLogs(endpointUrl, letter_type, nhs_id, img_hashes) {
+  async sendLogs(endpointUrl, letter_type, nhs_id, letter_id) {
     if (!this.isProduction) {
       console.warn(
         "BatchLogger: sendLogs called in DEVELOPMENT mode. No action taken."
@@ -115,13 +119,13 @@ class BatchLogger {
       return;
     }
 
-    // Prepare the new payload structure
-    const logsToSend = this.logBuffer;
+    const logsToSend = this.logBuffer; /** array that will store all logs */
+
     const payload = {
       letter_type: letter_type,
-      nhs_id: nhs_id,
-      img_hashes: img_hashes || "",
-      process_logs: logsToSend,
+      nhs_number: nhs_id,
+      letter_id,
+      processing_logs: logsToSend,
     };
 
     // Clear the buffer immediately before the network call
@@ -130,16 +134,17 @@ class BatchLogger {
     let success = false;
     let lastError = null;
     const MAX_ATTEMPTS = 3;
-
+    
     // --- Retry Loop ---
     for (let i = 1; i <= MAX_ATTEMPTS; i++) {
       try {
         /** Invoke access token in the loop because everytime, we want to make sure the token is valid */
         const accessToken = await getAccessToken("shary_prod");
+
         const response = await fetch(endpointUrl, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-type":"application/json",
             Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify(payload),
@@ -147,19 +152,16 @@ class BatchLogger {
 
         // Check for successful HTTP status codes (2xx)
         if (response.ok) {
-          console.log("BatchLogger: Logs successfully flushed via HTTP.");
+          console.log("BatchLogger: Logs successfully sent via HTTP.");
           success = true;
           break;
         }
 
-        console.log("response is not ok", response);
-
-        lastError = new Error(`HTTP status failure: ${response.status}`);
+        lastError = new Error(`HTTP status failure: ${response}`);
       } catch (error) {
         lastError = error;
       }
 
-      throw new Error("Req failed", lastError);
       // Log the failed i, but only retry if we haven't hit the max attempts
       if (!success && i < MAX_ATTEMPTS) {
         console.warn(

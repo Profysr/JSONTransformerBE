@@ -9,6 +9,6 @@ export const SERVERS = {
     BASE_URL: "https://sharybeautomation-9qrox.kinsta.app",
     Name: "Shary_Production",
     USERNAME: "automation_server@kynoby.com",
-    PASSWORD: "qweasd321",
+    PASSWORD: "a78678600",
   },
 };

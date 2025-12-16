@@ -20,8 +20,7 @@ router.post("/transform/:inst_id/:letter_type", async (req, res) => {
 
   /** Extract context for logging */
   let nhs_id = inputData?.nhs_id;
-  let img_hashes = inputData?.img_hashes;
-  img_hashes = Array.isArray(img_hashes) ? img_hashes.join(",") : "";
+  let letter_id = inputData?.letter_id;
 
   /** Defining logs endpoint dynamically */
   let BASE_URL = SERVERS["shary_prod"].BASE_URL;
@@ -29,12 +28,12 @@ router.post("/transform/:inst_id/:letter_type", async (req, res) => {
     .toLowerCase()
     .trim()}`;
 
-  // logger.info("Received Req with these parameters:", {
-  //   inst_id,
-  //   letter_type,
-  //   nhsid: nhs_id,
-  //   letter_id: inputData?.letter_id || null,
-  // });
+  logger.info("Received Req with these parameters:", {
+    inst_id,
+    letter_type,
+    nhsid: nhs_id,
+    letter_id,
+  });
 
   try {
     /** send the input data and slug to the transformation */
@@ -55,7 +54,7 @@ router.post("/transform/:inst_id/:letter_type", async (req, res) => {
     });
   } finally {
     // Invoke logger.sendLogs after processing is complete
-    await logger.sendLogs(apiEndpoint, letter_type, nhs_id, img_hashes);
+    await logger.sendLogs(apiEndpoint, letter_type, nhs_id, letter_id);
   }
 });
 
