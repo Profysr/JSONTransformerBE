@@ -4,6 +4,7 @@
  */
 
 import { getAccessToken } from "../auth/index.js";
+import { makeRequest } from "./makeReq.js";
 
 class BatchLogger {
   constructor() {
@@ -134,35 +135,28 @@ class BatchLogger {
     let success = false;
     let lastError = null;
     const MAX_ATTEMPTS = 3;
-    
+
     // --- Retry Loop ---
     for (let i = 1; i <= MAX_ATTEMPTS; i++) {
-      try {
-        /** Invoke access token in the loop because everytime, we want to make sure the token is valid */
-        const accessToken = await getAccessToken("shary_prod");
+      /** Invoke access token in the loop because everytime, we want to make sure the token is valid */
+      const accessToken = await getAccessToken("shary_prod");
 
-        const response = await fetch(endpointUrl, {
-          method: "POST",
-          headers: {
-            "Content-type":"application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(payload),
-        });
+      const result = await makeRequest(
+        endpointUrl,
+        accessToken,
+        "POST",
+        payload
+      );
 
-        // Check for successful HTTP status codes (2xx)
-        if (response.ok) {
-          console.log("BatchLogger: Logs successfully sent via HTTP.");
-          success = true;
-          break;
-        }
-
-        lastError = new Error(`HTTP status failure: ${response}`);
-      } catch (error) {
-        lastError = error;
+      if (result.success) {
+        console.log("BatchLogger: Logs successfully sent via HTTP.");
+        success = true;
+        break;
       }
 
-      // Log the failed i, but only retry if we haven't hit the max attempts
+      lastError = new Error(result.error || "Unknown error");
+
+      // Log the failed attempt, but only retry if we haven't hit the max attempts
       if (!success && i < MAX_ATTEMPTS) {
         console.warn(
           `Logger: Attempt ${i} failed (${lastError.message}). Retrying in 3 second...`
@@ -175,11 +169,9 @@ class BatchLogger {
     // Final check after the loop finishes
     if (!success) {
       console.error(
-        `Logger: All ${MAX_ATTEMPTS} attempts failed. Final error: ${lastError.message}. Logs retained for next scheduled http.`
+        `Logger: All ${MAX_ATTEMPTS} attempts failed. Final error: ${lastError.message}. Putting the payload back to the console`,
+        payload
       );
-
-      // Re-add failed logs to the beginning of the buffer.
-      this.logBuffer.unshift(...logsToSend);
     }
   }
 }

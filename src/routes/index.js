@@ -14,13 +14,14 @@ router.get("/", (req, res) => {
   });
 });
 
-router.post("/transform/:inst_id/:letter_type", async (req, res) => {
-  const { inst_id, letter_type } = req.params;
+router.post("/transform/:inst_id", async (req, res) => {
+  const { inst_id } = req.params;
   const inputData = req.body || {};
 
   /** Extract context for logging */
   let nhs_id = inputData?.nhs_id;
   let letter_id = inputData?.letter_id;
+  let letter_type = inputData?.letter_type;
 
   /** Defining logs endpoint dynamically */
   let BASE_URL = SERVERS["shary_prod"].BASE_URL;
@@ -37,7 +38,7 @@ router.post("/transform/:inst_id/:letter_type", async (req, res) => {
 
   try {
     /** send the input data and slug to the transformation */
-    const result = processTransformation({
+    const result = await processTransformation({
       inst_id: inst_id.trim().toLowerCase(),
       letter_type: letter_type.trim().toLowerCase(),
       inputData,
@@ -54,7 +55,7 @@ router.post("/transform/:inst_id/:letter_type", async (req, res) => {
     });
   } finally {
     // Invoke logger.sendLogs after processing is complete
-    await logger.sendLogs(apiEndpoint, letter_type, nhs_id, letter_id);
+    // await logger.sendLogs(apiEndpoint, letter_type, nhs_id, letter_id);
   }
 });
 
