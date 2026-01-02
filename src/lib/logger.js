@@ -10,12 +10,11 @@ class BatchLogger {
   constructor() {
     this.logBuffer = [];
     this.isProduction =
-      process.env.NODE_ENV.toLowerCase() === "production" || false;
+      process.env.NODE_ENV?.toLowerCase() === "production" || false;
     this.verbose = process.env.verbose || true;
 
     console.log(
-      `Logger initialized in ${
-        this.isProduction ? "PRODUCTION" : "DEVELOPMENT"
+      `Logger initialized in ${this.isProduction ? "PRODUCTION" : "DEVELOPMENT"
       } mode.`
     );
   }
@@ -47,7 +46,7 @@ class BatchLogger {
       // Development: Output human-readable format
       const { level, message, stack, meta } = logEntry;
       let base = `[${level.toUpperCase()}]: ${stack || message}`;
-      const metaObj = JSON.parse(meta);
+      const metaObj = meta;
 
       if (Object.keys(metaObj).length > 0) {
         base += ` | Meta: ${JSON.stringify(metaObj)}`;

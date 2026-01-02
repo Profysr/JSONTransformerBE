@@ -1,0 +1,75 @@
+{
+   "success":true,
+   "message":"Data successfully transformed according to client-specific rules.",
+   "output":{
+      "nhs_id":"6376285716",
+      "letter_id":"ee59ac6d783843eb83d246eea0b054cf",
+      "letter_codes":"XaKqd, 9N19., 52..., 32...",
+      "letter_codes_list":[
+         {
+            "id":4300,
+            "child":"32...",
+            "snomed_code":"46825001",
+            "c_term":"Electrocardiographic monitoring",
+            "qof":false,
+            "qof_flags":[
+               
+            ],
+            "code_type":null,
+            "comments":null,
+            "read_code_date":null
+         }
+      ],
+      "rpa_note":"Metrics found, Action Required",
+      "approval_date":"27/10/2025 07:20:25",
+      "approved_by":"siddique@kynoby.com",
+      "letter_type":"A&E",
+      "letter_date":"30-10-2025",
+      "metrics":[
+         {
+            "metric":"bp_systolic",
+            "value":"140",
+            "addDate":"true",
+            "metric_date":"30-10-2025",
+            "metric_codes":"2469",
+            "comments":""
+         },
+         {
+            "metric":"bp_diastolic",
+            "value":"80",
+            "addDate":"true",
+            "metric_date":"30-10-2025",
+            "metric_codes":"246A.",
+            "comments":""
+         },
+         {
+            "metric":"weight",
+            "value":"58",
+            "addDate":"true",
+            "metric_date":"",
+            "metric_codes":"227..",
+            "comments":""
+         },
+         {
+            "metric":"height",
+            "value":"1.57",
+            "addDate":"false",
+            "metric_date":"",
+            "metric_codes":"229..",
+            "comments":""
+         },
+         {
+            "metric":"heart_rate",
+            "value":"139",
+            "addDate":"false",
+            "metric_date":"",
+            "metric_codes":"X773s",
+            "comments":""
+         }
+      ],
+      "hospital_name":"Ipswich Ambulatory Emergency Care Unit",
+      "department":"Emergency Department",
+      "incident_date":"25-10-2025",
+      "fileaway":"true"
+   }
+}

@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { processTransformation } from "../controllers/transformationController.js";
 import logger from "../lib/logger.js";
-import { SERVERS } from "../global/Constants.js";
+import { deriveJSONRules } from "../lib/deriveJSON.js";
+import fs from "fs";
+import path from "path";
+import catchAsyncHandler from "../middleware/catchAsyncHandler.js";
+import { ErrorHandler } from "../middleware/errorHandler.js";
 
 const router = Router();
 
@@ -14,49 +18,25 @@ router.get("/", (req, res) => {
   });
 });
 
-router.post("/transform/:inst_id", async (req, res) => {
-  const { inst_id } = req.params;
-  const inputData = req.body || {};
+router.post("/transform/:inst_id", processTransformation);
 
-  /** Extract context for logging */
-  let nhs_id = inputData?.nhs_id;
-  let letter_id = inputData?.letter_id;
-  let letter_type = inputData?.letter_type;
+router.get(
+  "/derive_json",
+  catchAsyncHandler(async (req, res, next) => {
+    const inputPath = path.join(process.cwd(), "input.json");
 
-  /** Defining logs endpoint dynamically */
-  let BASE_URL = SERVERS["shary_prod"].BASE_URL;
-  let apiEndpoint = `${BASE_URL}/automation_config/transformation_logs/${inst_id
-    .toLowerCase()
-    .trim()}`;
+    if (!fs.existsSync(inputPath)) {
+      return next(new ErrorHandler(404, "input.json not found"));
+    }
 
-  logger.info("Received Req with these parameters:", {
-    inst_id,
-    letter_type,
-    nhsid: nhs_id,
-    letter_id,
-  });
+    const fileContent = fs.readFileSync(inputPath, "utf-8");
+    const json = JSON.parse(fileContent);
 
-  try {
-    /** send the input data and slug to the transformation */
-    const result = await processTransformation({
-      inst_id: inst_id.trim().toLowerCase(),
-      letter_type: letter_type.trim().toLowerCase(),
-      inputData,
-    });
-
+    // Assuming input.json has a root property "config" which is the array
+    const result = deriveJSONRules(json.config);
     return res.status(200).json(result);
-  } catch (error) {
-    console.error("Route Handler Error:", error);
-    return res.status(500).json({
-      status: "error",
-      ok: false,
-      message: "Internal server error during transformation.",
-      error: error.message,
-    });
-  } finally {
-    // Invoke logger.sendLogs after processing is complete
-    // await logger.sendLogs(apiEndpoint, letter_type, nhs_id, letter_id);
-  }
-});
+  })
+);
 
 export default router;
+
