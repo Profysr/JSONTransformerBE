@@ -1,0 +1,82 @@
+
+{"level":"info","message":"Started JSON Transformation","meta":{}}
+{"level":"info","message":"Configuration has 6 sections","meta":{}}
+{"level":"info","message":"[Section: letter_type_configuration] Started processing...","meta":{}}
+{"level":"info","message":"[letter_date] Found variable 'incident_date' -> \"06-08-2025\"","meta":{}}
+{"level":"info","message":"[letter_date] Successfully mapped to: 06-08-2025","meta":{}}
+{"level":"info","message":"[Section: rpa_note_checks] Started processing...","meta":{}}
+{"level":"info","message":"[batch_name] Evaluating Clause 1 (RootLogic: AND)","meta":{}}
+{"level":"warn","message":"[batch_name] Field 'rpa_note' is not found in input inputData","meta":{}}
+{"level":"error","message":"[batch_name] Field \"var(rpa_note)\" is missing in Input JSON","meta":{}}
+{"level":"info","message":"[batch_name] Condition not satisfied at Clause 1","meta":{}}
+{"level":"info","message":"[batch_name] Evaluating Clause 2 (RootLogic: AND)","meta":{}}
+{"level":"warn","message":"[batch_name] Field 'rpa_note' is not found in input inputData","meta":{}}
+{"level":"error","message":"[batch_name] Field \"var(rpa_note)\" is missing in Input JSON","meta":{}}
+{"level":"info","message":"[batch_name] Condition not satisfied at Clause 2","meta":{}}
+{"level":"info","message":"[batch_name] No condition satisfied, using elseValue: , isKilled: false","meta":{}}
+{"level":"info","message":"[batch_name] Successfully mapped to: ","meta":{}}
+{"level":"info","message":"[Section: readCodes] Started processing...","meta":{}}
+{"level":"info","message":"[ReadCodes] Starting transformation...","meta":{}}
+{"level":"info","message":"[ReadCodes] add_readCode is true, So, keep the existing letter codes","meta":{}}
+{"level":"info","message":"[ReadCodes] There are 4 existing codes present","meta":{}}
+{"level":"info","message":"[ReadCodes][Optional] Processing table: specific_read_codes","meta":{}}
+{"level":"info","message":"[ReadCodes:specific_read_codes][Table] Processing 1 rules.","meta":{}}
+{"level":"info","message":"[ReadCodes][specific_read_codes] Adding new code: XaPCc","meta":{}}
+{"level":"info","message":"[ReadCodes] Applying configuration rules to 5 codes...","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4252 - Subretinal neovascularisation of macula]] Evaluating Clause 1 (RootLogic: AND)","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4252 - Subretinal neovascularisation of macula]] Found variable 'read_code_date' -> \"2025-08-06T00:00:00Z\"","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4252 - Subretinal neovascularisation of macula]] Evaluation: '[var(read_code_date): 2025-08-06T00:00:00Z]' is_not_empty '[]' => true","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4252 - Subretinal neovascularisation of macula]] Condition satisfied at Clause 1. Value: true, isKilled: false","meta":{}}
+{"level":"info","message":"[date_type_readcodes [Code: F4252 - Subretinal neovascularisation of macula]] Found variable 'read_code_date' -> \"2025-08-06T00:00:00Z\"","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4251 - Atrophic age-related macular degeneration]] Evaluating Clause 1 (RootLogic: AND)","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4251 - Atrophic age-related macular degeneration]] Found variable 'read_code_date' -> \"2025-08-06T00:00:00Z\"","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4251 - Atrophic age-related macular degeneration]] Evaluation: '[var(read_code_date): 2025-08-06T00:00:00Z]' is_not_empty '[]' => true","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4251 - Atrophic age-related macular degeneration]] Condition satisfied at Clause 1. Value: true, isKilled: false","meta":{}}
+{"level":"info","message":"[date_type_readcodes [Code: F4251 - Atrophic age-related macular degeneration]] Found variable 'read_code_date' -> \"2025-08-06T00:00:00Z\"","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: XaKqd - Letter received]] Evaluating Clause 1 (RootLogic: AND)","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: XaKqd - Letter received]] Found variable 'read_code_date' -> \"null\"","meta":{}}
+{"level":"error","message":"[add_date_readcodes [Code: XaKqd - Letter received]] Field \"var(read_code_date)\" is missing in Input JSON","meta":{"id":180749,"child":"XaKqd","snomed_code":"198291000000105","c_term":"Letter received","qof":false,"qof_flags":[],"code_type":null,"comments":null,"read_code_date":null}}
+{"level":"info","message":"[add_date_readcodes [Code: XaKqd - Letter received]] Condition not satisfied at Clause 1","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: XaKqd - Letter received]] No condition satisfied, using elseValue: false, isKilled: false","meta":{}}
+{"level":"info","message":"[date_type_readcodes [Code: XaKqd - Letter received]] Found variable 'read_code_date' -> \"null\"","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4619 - Nuclear senile cataract]] Evaluating Clause 1 (RootLogic: AND)","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4619 - Nuclear senile cataract]] Found variable 'read_code_date' -> \"2025-08-06T00:00:00Z\"","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4619 - Nuclear senile cataract]] Evaluation: '[var(read_code_date): 2025-08-06T00:00:00Z]' is_not_empty '[]' => true","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: F4619 - Nuclear senile cataract]] Condition satisfied at Clause 1. Value: true, isKilled: false","meta":{}}        
+{"level":"info","message":"[date_type_readcodes [Code: F4619 - Nuclear senile cataract]] Found variable 'read_code_date' -> \"2025-08-06T00:00:00Z\"","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: XaPCc - Seen by ambulance crew]] Evaluating Clause 1 (RootLogic: AND)","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: XaPCc - Seen by ambulance crew]] Found variable 'read_code_date' -> \"null\"","meta":{}}
+{"level":"error","message":"[add_date_readcodes [Code: XaPCc - Seen by ambulance crew]] Field \"var(read_code_date)\" is missing in Input JSON","meta":{"child":"XaPCc","read_code_date":null,"comments":null,"code_type":null,"c_term":"Seen by ambulance crew","add_date":true,"promote_problem":"Promote to problem","put_summary":"Put in the summary","isMajor":true}}
+{"level":"info","message":"[add_date_readcodes [Code: XaPCc - Seen by ambulance crew]] Condition not satisfied at Clause 1","meta":{}}
+{"level":"info","message":"[add_date_readcodes [Code: XaPCc - Seen by ambulance crew]] No condition satisfied, using elseValue: false, isKilled: false","meta":{}}       
+{"level":"info","message":"[date_type_readcodes [Code: XaPCc - Seen by ambulance crew]] Found variable 'read_code_date' -> \"null\"","meta":{}}
+{"level":"info","message":"[ReadCodes] Applying 1 forced mappings...","meta":{}}
+{"level":"info","message":"[ReadCodes] Applying forced mapping: XaPCc -> XaIwQ","meta":{}}
+{"level":"info","message":"[ReadCodes] Refining final output...","meta":{}}
+{"level":"info","message":"[ReadCodes] Completed. Total codes: 5","meta":{}}
+{"level":"info","message":"[Section: optional_codes] Started processing...","meta":{}}
+{"level":"info","message":"[Section: metrics] Started processing...","meta":{}}
+{"level":"info","message":"[Metrics][Table] Processing 7 rules.","meta":{}}
+{"level":"info","message":"[Metrics][blood_pressure] Processing BP - splitting into systolic/diastolic...","meta":{}}
+{"level":"info","message":"[add_date] Evaluating Clause 1 (RootLogic: AND)","meta":{}}
+{"level":"warn","message":"[add_date] Field 'weight_date' is not found in input inputData","meta":{}}
+{"level":"error","message":"[add_date] Field \"var(weight_date)\" is missing in Input JSON","meta":{"metric":"weight","add_metric":true,"metric_codes":"227..","add_date":{"else":{"value":"false","isKilled":false},"type":"cascading-advanced","clauses":[{"rules":[{"id":"d78632b3-ae73-4676-8aa8-34a82c35a290","type":"condition","field":"var(weight_date)","value":"","operator":"is_not_empty","caseSensitive":false}],"outcome":{"value":"true","isKilled":false},"rootLogicType":"AND"}]},"date_type":"var(weight_date)"}}
+{"level":"info","message":"[add_date] Condition not satisfied at Clause 1","meta":{}}
+{"level":"info","message":"[add_date] No condition satisfied, using elseValue: false, isKilled: false","meta":{}}
+{"level":"info","message":"[Metrics][Table][add_date] Rule change: \"[object Object]\" -> \"false\"","meta":{}}
+{"level":"warn","message":"[date_type] Field 'weight_date' is not found in input inputData","meta":{}}
+{"level":"info","message":"[Metrics][Table][date_type] Rule change: \"var(weight_date)\" -> \"undefined\"","meta":{}}
+{"level":"warn","message":"[Metrics] Metric weight not found in input data. So, ignoring it","meta":{}}
+{"level":"warn","message":"[Metrics] Metric height not found in input data. So, ignoring it","meta":{}}
+{"level":"warn","message":"[Metrics] Metric bmi not found in input data. So, ignoring it","meta":{}}
+{"level":"info","message":"[Metrics][heart_rate] Processing metric with value: 96","meta":{}}
+{"level":"warn","message":"[Metrics] Metric o2_level not found in input data. So, ignoring it","meta":{}}
+{"level":"warn","message":"[Metrics] Metric smoker not found in input data. So, ignoring it","meta":{}}
+{"level":"info","message":"[Metrics][Table] Produced 3 items.","meta":{}}
+{"level":"info","message":"[Metrics] Completed. Total items: 3","meta":{}}
+{"level":"info","message":"[Section: forward_letter] Started processing...","meta":{}}
+{"level":"info","message":"[fileaway] Successfully mapped to: true","meta":{}}
+{"level":"info","message":"[choose_flag] Successfully mapped to: true","meta":{}}
+{"level":"info","message":"[flag_color] Successfully mapped to: Pink","meta":{}}
+{"level":"info","message":"Data transformation completed successfully in 49ms","meta":{}}
+{"level":"info","message":"Final transformed data:","meta":{"nhs_id":"4389375105","letter_id":"052b18705b804e699a6de2eb6302e33f","file_name":"130-4389375105-05 Nov 2025","file_sha256":"8b74f0e8301a0faad1c19987ebb6bf073d89664b1e4baaba5f6734b6f388bc00","imgs_sha256":["5bd7e5c75259003535d62006bc26231e3718b84612edbc2324a2e92fad93af80","6ae597d672dcd4e4ea999a48a71e4e8403206e657f51125929db8834f91c2f2e","e04b590454483d2d8fe16e68d65b15f3125c039f277321dcf31be80b3be04330"],"approval_date":"05/11/2025 11:46:13","approved_by":"iqra@kynoby.com","letter_type":"Ophthalmology","letter_date":"06-08-2025","hospital_name":"York Hospital","department":"Ophthalmology","incident_date":"06-08-2025","metrics":[{"c_term":"bp_systolic","value":"141","addDate":"false","read_code_date":null,"child":"2469","code_type":"metrics"},{"c_term":"bp_diastolic","value":"70","addDate":"false","read_code_date":null,"child":"246A.","code_type":"metrics"},{"c_term":"heart_rate","value":"96","addDate":"false","read_code_date":null,"child":"X773s","code_type":"metrics"}],"diagnosis":"[{'Condition': 'Wet Age-related Macular Degeneration', 'Code': 'F4252', 'Status': 'New', 'Reason': 'Diagnosed in the right eye.'}, {'Condition': 'Dry Age-related Macular Degeneration', 'Code': 'F4251', 'Status': 'New', 'Reason': 'Diagnosed in the left eye.'}]","treatment_procedure":"[{'Treatment': 'Intravitreal Vabysmo Injection', 'Code': 'X00PF', 'Reason': 'Administered to the right eye for treatment of Wet AMD.'}]","follow_up":"{'instructions': 'Follow-up in 6 weeks for Macular Degeneration and Diabetes review. Referral to Cataract - New Patient Assessment Clinic.'}","batch_name":"","readCodes":{"global_rules":{"use_inactive":"true","override_bilateral":"true","search_codes_in_problems":"true"},"letter_codes":"F4252, F4251, XaKqd, F4619, XaIwQ","letter_codes_list":[{"child":"F4252","snomed_code":"414173003","c_term":"Subretinal neovascularisation of macula","code_type":"diagnosis","comments":"R","read_code_date":"2025-08-06T00:00:00Z","attach_problems":"true","create_problems":"true","problem_severity":"Minor","add_date":true},{"child":"F4251","snomed_code":"414875008","c_term":"Atrophic age-related macular degeneration","code_type":"diagnosis","comments":"L","read_code_date":"2025-08-06T00:00:00Z","attach_problems":"true","create_problems":"true","problem_severity":"Minor","add_date":true},{"child":"XaKqd","snomed_code":"198291000000105","c_term":"Letter received","code_type":null,"comments":null,"read_code_date":null,"attach_problems":"true","create_problems":"true","problem_severity":"Minor","add_date":false},{"child":"F4619","snomed_code":"193589009","c_term":"Nuclear senile cataract","code_type":"diagnosis","comments":"NA","read_code_date":"2025-08-06T00:00:00Z","attach_problems":"true","create_problems":"true","problem_severity":"Minor","add_date":true},{"child":"XaIwQ","read_code_date":null,"comments":null,"code_type":null,"c_term":"Seen by ambulance crew","add_date":false,"promote_problem":"Promote to problem","put_summary":"Put in the summary","attach_problems":"true","create_problems":"true","problem_severity":"Major"}]},"fileaway":"true","choose_flag":"true","flag_color":"Pink"}}

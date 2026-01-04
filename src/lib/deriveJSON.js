@@ -9,9 +9,15 @@ export const deriveJSONRules = (config) => {
     return output;
   }
 
+  /**
+   * Trims value if it's a string, otherwise returns value as-is
+   */
+  const trimIfString = (val) => (typeof val === "string" ? val.trim() : val);
+
   const isEmpty = (val) => {
     if (val === undefined || val === null) return true;
-    if (typeof val === "string") return val.trim().length === 0;
+    const trimmed = trimIfString(val);
+    if (typeof trimmed === "string") return trimmed.length === 0;
     return false;
   };
 
@@ -31,36 +37,35 @@ export const deriveJSONRules = (config) => {
         const cleanRow = {};
 
         for (const col of columns) {
+          // Trim the key we are looking for just in case the column definition has whitespace
+          const colKey = trimIfString(col.key);
+
           // Check dependency logic
           if (col.dependsOn) {
-            const depValue = row[col.dependsOn];
+            const depValue = trimIfString(row[col.dependsOn]);
             if (!depValue || depValue === "false") {
-              logger.info(`[Table: ${fieldId}][Row: ${index}] Skipping column '${col.key}' due to dependency '${col.dependsOn}' (Value: ${depValue})`);
+              logger.info(`[Table: ${fieldId}][Row: ${index}] Skipping column '${colKey}' due to dependency '${col.dependsOn}'`);
               continue;
             }
           }
 
-          const val = row[col.key];
+          const val = row[colKey];
           if (!isEmpty(val)) {
-            cleanRow[col.key] = val;
+            // TRIM APPLIED HERE: For values within table rows
+            cleanRow[colKey] = trimIfString(val);
           } else {
-            logger.info(`[Table: ${fieldId}][Row: ${index}] Column '${col.key}' is empty, excluding.`);
+            logger.info(`[Table: ${fieldId}][Row: ${index}] Column '${colKey}' is empty or whitespace, excluding.`);
           }
         }
 
-        const hasContent = Object.keys(cleanRow).length > 0;
-        if (!hasContent) {
-          logger.info(`[Table: ${fieldId}][Row: ${index}] Row resulted in no valid data.`);
-          return null;
-        }
-
-        return cleanRow;
+        return Object.keys(cleanRow).length > 0 ? cleanRow : null;
       })
       .filter((row) => row !== null);
   };
 
   config.forEach((section) => {
-    const sectionName = section.sectionKey || "Unknown Section";
+    // TRIM APPLIED HERE: Section Key
+    const sectionName = trimIfString(section.sectionKey) || "Unknown Section";
     logger.info(`Processing Section: [${sectionName}]`);
 
     const sectionData = {};
@@ -72,17 +77,11 @@ export const deriveJSONRules = (config) => {
     }
 
     section.fields.forEach((field) => {
-      const fieldLogId = `Field: ${field.id || 'unnamed'}`;
+      const fieldId = trimIfString(field.id);
+      const fieldLogId = `Field: ${fieldId || 'unnamed'}`;
 
-      // Exclude inactive fields
-      if (field.isActive === false) {
-        logger.info(`[${sectionName}][${fieldLogId}] Skipped: isActive is false.`);
-        return;
-      }
-
-      // Exclude locked fields
-      if (field.isLocked) {
-        logger.info(`[${sectionName}][${fieldLogId}] Skipped: isLocked is true.`);
+      if (field.isActive === false || field.isLocked) {
+        logger.info(`[${sectionName}][${fieldLogId}] Skipped: Inactive or Locked.`);
         return;
       }
 
@@ -90,43 +89,42 @@ export const deriveJSONRules = (config) => {
 
       if (field.type === "table") {
         logger.info(`[${sectionName}][${fieldLogId}] Entering table processing...`);
-        valueToInclude = processTableValue(field.value, field.columns, field.id);
+        const processedRows = processTableValue(field.value, field.columns, fieldId);
 
-        if (!valueToInclude || valueToInclude.length === 0) {
+        if (!processedRows || processedRows.length === 0) {
           logger.info(`[${sectionName}][${fieldLogId}] Table result empty, skipping field.`);
           return;
         }
 
-        let columns = field.columns.map(curr => {
-          return {
-            key: curr.key,
-            dependsOn: curr.dependsOn,
+        // TRIM APPLIED HERE: Column metadata keys
+        let columns = field.columns
+          .filter(curr => curr.canConditional === true || !isEmpty(curr.dependsOn))
+          .map(curr => ({
+            key: trimIfString(curr.key),
+            dependsOn: trimIfString(curr.dependsOn),
             canConditional: curr.canConditional
-          }
-        }).filter(curr => curr.canConditional == true || !isEmpty(curr.dependsOn));
+          }));
 
-        valueToInclude = { columns, value: valueToInclude }
+        valueToInclude = { columns, value: processedRows };
       } else {
         if (isEmpty(valueToInclude)) {
           logger.info(`[${sectionName}][${fieldLogId}] Skipping: Value is empty.`);
           return;
         }
+        // TRIM APPLIED HERE: Standard field values
+        valueToInclude = trimIfString(valueToInclude);
       }
 
-      // Include the field value
-      sectionData[field.id] = valueToInclude;
+      sectionData[fieldId] = valueToInclude;
       hasData = true;
       logger.info(`[${sectionName}][${fieldLogId}] Successfully added to output.`);
     });
 
     if (hasData && section.sectionKey) {
-      output[section.sectionKey] = sectionData;
-      logger.info(`[${sectionName}] Section completed with ${Object.keys(sectionData).length} fields.`);
-    } else {
-      logger.info(`[${sectionName}] Section skipped: No valid data found.`);
+      output[trimIfString(section.sectionKey)] = sectionData;
     }
   });
 
-  logger.info("JSON derivation completed successfully.", output);
+  logger.info("JSON derivation completed successfully.");
   return output;
 };

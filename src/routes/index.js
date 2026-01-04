@@ -20,6 +20,7 @@ router.get("/", (req, res) => {
 
 router.post("/transform/:inst_id", processTransformation);
 
+/** Created it for testing purpose */
 router.get(
   "/derive_json",
   catchAsyncHandler(async (req, res, next) => {

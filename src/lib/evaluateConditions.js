@@ -1,60 +1,47 @@
 import logger from "./logger.js";
+import { resolveVariable, isEmpty } from "./utils.js";
 
 /**
  * Executes a single rule condition against the input data.
  * Returns false and logs an error if any required component is missing or invalid.
  */
-export function evaluateCondition(inputData, condition, ruleKey) {
+export function evaluateCondition(inputData, condition, ruleKey, localContext = {}) {
   try {
-    // 1. Validate Condition Object Structure
-    if (!condition) {
-      logger.error(`[${ruleKey}] Condition object is undefined or null.`);
-      return false;
-    }
 
-    let { field, operator, value: targetValue } = condition;
+    let { field, operator, value: fieldInInput } = condition;
     const caseSensitive = !!condition.case_sensitive;
 
-    // Handle var() in field (extract field name)
+    // Resolve field value from var() syntax
+    let fieldInCondition;
     if (typeof field === "string" && field.startsWith("var(")) {
-      const fieldMatch = field.match(/^var\((.+)\)$/);
-      if (fieldMatch && fieldMatch[1]) {
-        field = fieldMatch[1].trim();
+      fieldInCondition = resolveVariable(field, inputData, localContext, ruleKey);
+    } else {
+      // Direct field name (fallback for non-var syntax)
+      fieldInCondition = typeof field === "string"
+        ? field.split(".").reduce((acc, part) => (acc ? acc[part] : undefined), localContext)
+        : undefined;
+
+      if (fieldInCondition === undefined) {
+        fieldInCondition = inputData && typeof field === "string"
+          ? field.split(".").reduce((acc, part) => (acc ? acc[part] : undefined), inputData)
+          : undefined;
       }
     }
 
-    // Handle var() in targetValue (resolve value from inputData)
-    if (typeof targetValue === "string" && targetValue.startsWith("var(")) {
-      const valueMatch = targetValue.match(/^var\((.+)\)$/);
-      if (valueMatch && valueMatch[1]) {
-        const sourcePath = valueMatch[1].trim();
-        // Resolve nested path in inputData
-        const resolvedValue = sourcePath
-          .split(".")
-          .reduce((acc, part) => (acc ? acc[part] : undefined), inputData);
-
-        logger.info(`[${ruleKey}] Resolved var(${sourcePath}) to: ${resolvedValue}`);
-        targetValue = resolvedValue;
-      }
+    // Resolve fieldInInput if it's a variable
+    if (typeof fieldInInput === "string" && fieldInInput.startsWith("var(")) {
+      fieldInInput = resolveVariable(fieldInInput, inputData, localContext, ruleKey);
     }
 
-    // Resolve sourceValue (handle nested paths if present)
-    const sourceValue = inputData && typeof field === "string"
-      ? field.split(".").reduce((acc, part) => (acc ? acc[part] : undefined), inputData)
-      : undefined;
-
-    // 2. Strict Exception: Missing Field in Input
-    if (sourceValue === undefined || sourceValue === null || sourceValue === "") {
-      logger.error(`[${ruleKey}] Field "${field}" is missing in Input JSON`);
+    // Check if field value is missing
+    if (isEmpty(fieldInCondition)) {
+      logger.error(`[${ruleKey}] Field "${field}" is missing in Input JSON`, localContext);
       return false;
     }
 
-    // 3. Strict Exception: Checking if targetValue is missing + operators are not unary.
-    const isUnaryOperator = ["is_empty", "is_not_empty"].includes(operator);
-    if (
-      (targetValue === undefined || targetValue === null || targetValue === "") &&
-      !isUnaryOperator
-    ) {
+    // Check if fieldInInput is missing for non-unary operators
+    const isUnaryOperator = ["is_empty", "is_not_empty", "is_null", "is_not_null"].includes(operator);
+    if (isEmpty(fieldInInput) && !isUnaryOperator) {
       logger.error(
         `[${ruleKey}] Value is undefined in condition for operator "${operator}".`
       );
@@ -113,6 +100,9 @@ export function evaluateCondition(inputData, condition, ruleKey) {
       },
       is_not_empty: (src) => !operatorHandlers.is_empty(src),
 
+      is_null: (src) => src === null,
+      is_not_null: (src) => src !== null,
+
       less_than: (src, tgt) =>
         evalNumeric(src, tgt, "less_than", (s, t) => s < t),
       less_than_or_equal_to: (src, tgt) =>
@@ -130,10 +120,10 @@ export function evaluateCondition(inputData, condition, ruleKey) {
       return false;
     }
 
-    const result = handler(sourceValue, targetValue);
+    const result = handler(fieldInCondition, fieldInInput);
 
     logger.info(
-      `[${ruleKey}] Evaluation: '[${field}: ${sourceValue}]' ${operator} '[${targetValue}]' => ${result}`
+      `[${ruleKey}] Evaluation: '[${field}: ${fieldInCondition}]' ${operator} '[${fieldInInput}]' => ${result}`
     );
 
     return result;

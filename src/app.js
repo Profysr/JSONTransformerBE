@@ -20,6 +20,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Defined Routes
 app.get("/", (req, res) => {
   res.send({
     message: "Transformation Module Backend is running",
@@ -60,22 +61,6 @@ process.on('uncaughtException', (err) => {
   );
 
   console.error(JSON.stringify(crashLogEntry));
-
-  // 2. Production Mode: attempt to send buffered logs one last time
-  if (logger.isProduction) {
-    logger
-      .flushHttp(process.env.API_ENDPOINT)
-      .then(() => {
-        console.error("Logger: Final best-effort flush completed before exit.");
-        process.exit(1);
-      })
-      .catch(() => {
-        console.error("Logger: Fatal error during final flush attempt.");
-        process.exit(1);
-      });
-  } else {
-    process.exit(1);
-  }
 });
 
 

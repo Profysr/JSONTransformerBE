@@ -1,0 +1,269 @@
+{
+  "letter_type_configuration": {
+    "letter_date": "var(incident_date) "
+  },
+  "rpa_note_checks": {
+    "batch_name": {
+      "else": {
+        "value": "",
+        "isKilled": false
+      },
+      "type": "cascading-advanced",
+      "clauses": [
+        {
+          "rules": [
+            {
+              "id": "88d92d6b-111d-4e61-9536-3d7787800ff9",
+              "type": "condition",
+              "field": "var(rpa_note)",
+              "value": "Action Required",
+              "operator": "contains",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "Practice to Review - Urgent Batch ",
+            "isKilled": true
+          },
+          "rootLogicType": "AND"
+        },
+        {
+          "rules": [
+            {
+              "id": "0dc79482-15b0-48f8-9b51-153fc128cf18",
+              "type": "condition",
+              "field": "var(rpa_note)",
+              "value": "Safeguarding",
+              "operator": "contains",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "Safeguarding",
+            "isKilled": true
+          },
+          "rootLogicType": "AND"
+        }
+      ]
+    }
+  },
+  "readCodes": {
+    "add_readcodes": "true",
+    "add_date_readcodes": {
+      "else": {
+        "value": "false",
+        "isKilled": false
+      },
+      "type": "cascading-advanced",
+      "clauses": [
+        {
+          "rules": [
+            {
+              "id": "1f8d8298-60b6-468f-a3dc-325a1b2d5753",
+              "type": "condition",
+              "field": "var(read_code_date)",
+              "value": "",
+              "operator": "is_not_empty",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "true",
+            "isKilled": false
+          },
+          "rootLogicType": "AND"
+        }
+      ]
+    },
+    "date_type_readcodes": "var(read_code_date)",
+    "attach_problems": "true",
+    "create_problems": "true",
+    "problem_severity": "Minor",
+    "use_inactive": "true",
+    "override_bilateral": "true",
+    "search_codes_in_problems": "true"
+  },
+  "optional_codes": {
+    "specific_problem_links":{
+      "columns": [
+          { "key": "child", "label": "Child Code", "type": "input" },
+          { "key": "c_term", "label": "Code Term", "type": "input" },
+          {
+            "key": "addCode",
+            "label": "Add Code?",
+            "helperText":
+              "Select Yes/No OR Define your condition when to add this diagnosis code?",
+            "type": "boolean",
+            "canConditional": true
+          },
+          {
+            "key": "isMajor",
+            "label": "Major?",
+            "helperText":
+              "Do you want to add this diagnosis code as Major in Problem Links?",
+            "type": "boolean",
+            "canConditional": true,
+            "dependsOn": "addCode"
+          },
+          {
+            "key": "forcedMappings",
+            "label": "Forced Mappings",
+            "helperText":
+              "Define mappings for this diagnosis code. E.g., map 'abc' to 'xyz' laterality.",
+            "type": "logic",
+            "canConditional": true,
+            "dependsOn": "addCode"
+          }
+        ],
+        "value": [
+          {
+            "child": "9N19.",
+            "c_term": "Accident and Emergency Department",
+            "addCode": true,
+            "isMajor": true,
+            "forcedMappings": ""
+          }
+        ]
+    },
+    "specific_read_codes": {
+      "columns": [
+        {
+          "key": "addCode",
+          "canConditional": true
+        },
+        {
+          "key": "add_date",
+          "canConditional": true
+        },
+        {
+          "key": "promote_problem",
+          "dependsOn": "addCode"
+        },
+        {
+          "key": "put_summary",
+          "dependsOn": "addCode"
+        },
+        {
+          "key": "isMajor",
+          "dependsOn": "addCode",
+          "canConditional": true
+        },
+        {
+          "key": "forcedMappings",
+          "dependsOn": "addCode",
+          "canConditional": true
+        }
+      ],
+      "value": [
+        {
+          "child": "XaPCc",
+          "c_term": "Seen by ambulance crew",
+          "addCode": true,
+          "add_date": true,
+          "promote_problem": "Promote to problem",
+          "put_summary": "Put in the summary",
+          "isMajor": true,
+          "forcedMappings": "XaIwQ"
+        }
+      ]
+    }
+  },
+  "metrics": {
+    "metrics_list": {
+      "columns": [
+        {
+          "key": "add_metric",
+          "canConditional": true
+        },
+        {
+          "key": "metric_codes",
+          "dependsOn": "add_metric"
+        },
+        {
+          "key": "add_date",
+          "canConditional": true
+        },
+        {
+          "key": "date_type",
+          "dependsOn": "add_date",
+          "canConditional": true
+        }
+      ],
+      "value": [
+        {
+          "metric": "blood_pressure",
+          "add_metric": true,
+          "metric_codes": "2469/246A.",
+          "add_date": false
+        },
+        {
+          "metric": "weight",
+          "add_metric": true,
+          "metric_codes": "227..",
+          "add_date": {
+            "else": {
+              "value": "false",
+              "isKilled": false
+            },
+            "type": "cascading-advanced",
+            "clauses": [
+              {
+                "rules": [
+                  {
+                    "id": "d78632b3-ae73-4676-8aa8-34a82c35a290",
+                    "type": "condition",
+                    "field": "var(weight_date)",
+                    "value": "",
+                    "operator": "is_not_empty",
+                    "caseSensitive": false
+                  }
+                ],
+                "outcome": {
+                  "value": "true",
+                  "isKilled": false
+                },
+                "rootLogicType": "AND"
+              }
+            ]
+          },
+          "date_type": "var(weight_date)"
+        },
+        {
+          "metric": "height",
+          "add_metric": true,
+          "metric_codes": "229..",
+          "add_date": false
+        },
+        {
+          "metric": "bmi",
+          "add_metric": true,
+          "metric_codes": "22K..",
+          "add_date": false
+        },
+        {
+          "metric": "heart_rate",
+          "add_metric": true,
+          "metric_codes": "X773s",
+          "add_date": false
+        },
+        {
+          "metric": "o2_level",
+          "add_metric": true,
+          "metric_codes": "X77cx",
+          "add_date": false
+        },
+        {
+          "metric": "smoker",
+          "add_metric": true,
+          "metric_codes": "X77cx",
+          "add_date": false
+        }
+      ]
+    }
+  },
+  "forward_letter": {
+    "fileaway": "true",
+    "choose_flag": "true",
+    "flag_color": "Pink"
+  }
+}

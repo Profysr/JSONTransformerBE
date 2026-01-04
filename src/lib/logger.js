@@ -4,7 +4,7 @@
  */
 
 import { getAccessToken } from "../auth/index.js";
-import { makeRequest } from "./makeReq.js";
+import { makeRequest, makeRequestWithRetry } from "./makeReq.js";
 
 class BatchLogger {
   constructor() {
@@ -119,7 +119,7 @@ class BatchLogger {
       return;
     }
 
-    const logsToSend = this.logBuffer; /** array that will store all logs */
+    const logsToSend = this.logBuffer;
 
     const payload = {
       letter_type: letter_type,
@@ -131,44 +131,23 @@ class BatchLogger {
     // Clear the buffer immediately before the network call
     this.logBuffer = [];
 
-    let success = false;
-    let lastError = null;
-    const MAX_ATTEMPTS = 3;
-
-    // --- Retry Loop ---
-    for (let i = 1; i <= MAX_ATTEMPTS; i++) {
-      /** Invoke access token in the loop because everytime, we want to make sure the token is valid */
-      const accessToken = await getAccessToken("shary_prod");
-
-      const result = await makeRequest(
+    try {
+      await makeRequestWithRetry(
+        () => getAccessToken("shary_prod"),
         endpointUrl,
-        accessToken,
         "POST",
-        payload
+        payload,
+        {
+          maxAttempts: 3,
+          retryDelay: 3000,
+          logPrefix: "BatchLogger"
+        }
       );
 
-      if (result.success) {
-        console.log("BatchLogger: Logs successfully sent via HTTP.");
-        success = true;
-        break;
-      }
-
-      lastError = new Error(result.error || "Unknown error");
-
-      // Log the failed attempt, but only retry if we haven't hit the max attempts
-      if (!success && i < MAX_ATTEMPTS) {
-        console.warn(
-          `Logger: Attempt ${i} failed (${lastError.message}). Retrying in 3 second...`
-        );
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-      }
-    }
-    // --- End of Retry Loop ---
-
-    // Final check after the loop finishes
-    if (!success) {
+      console.log("BatchLogger: Logs successfully sent via HTTP.");
+    } catch (error) {
       console.error(
-        `Logger: All ${MAX_ATTEMPTS} attempts failed. Final error: ${lastError.message}. Putting the payload back to the console`,
+        `BatchLogger: Failed to send logs after all attempts. Error: ${error.message}. Payload:`,
         payload
       );
     }
