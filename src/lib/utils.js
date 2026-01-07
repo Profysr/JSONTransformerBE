@@ -1,11 +1,20 @@
 import logger from "./logger.js";
 
 /**
+ * Trims value if it's a string, otherwise returns value as-is
+ */
+export const trimString = (val) => (typeof val === "string" ? val.trim() : val);
+
+/**
  * Check if a value is empty (null, undefined, or empty string)
  */
-export const isEmpty = (value) => {
-    return value === null || value === undefined || value === "";
+export const isEmpty = (val) => {
+    if (val === undefined || val === null) return true;
+    const trimmed = trimString(val);
+    if (typeof trimmed === "string") return trimmed.length === 0;
+    return false;
 };
+
 
 /**
  * Resolve a variable reference (var(...)) from input inputData or localContext

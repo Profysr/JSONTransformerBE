@@ -1,5 +1,51 @@
 import logger from "./logger.js";
+import { isEmpty, trimString } from "./utils.js";
 
+/**
+ * Helper to process table field rows with deep tracing
+ */
+const processTableValue = (rows, columns, fieldId) => {
+  if (!Array.isArray(rows) || !Array.isArray(columns)) {
+    logger.error(`[Table: ${fieldId}] Validation failed: rows or columns are not arrays.`);
+    return [];
+  }
+
+  logger.info(`[Table: ${fieldId}] Processing ${rows.length} rows against ${columns.length} columns.`);
+
+  return rows
+    .map((row, index) => {
+      const cleanRow = { ...row };
+
+      for (const col of columns) {
+        // Trim the key we are looking for just in case the column definition has whitespace
+        const colKey = trimString(col.key);
+
+        // Check dependency logic
+        if (col.dependsOn) {
+          const depValue = trimString(row[col.dependsOn]);
+          if (!depValue || depValue === "false") {
+            logger.info(`[Table: ${fieldId}][Row: ${index}] Skipping column '${colKey}' due to dependency '${col.dependsOn}'`);
+            delete cleanRow[colKey];
+            continue;
+          }
+        }
+
+        const val = row[colKey];
+        if (!isEmpty(val)) {
+          // TRIM APPLIED HERE: For values within table rows
+          cleanRow[colKey] = trimString(val);
+        } else {
+          logger.info(`[Table: ${fieldId}][Row: ${index}] Column '${colKey}' is empty or whitespace, excluding.`);
+          delete cleanRow[colKey];
+        }
+      }
+
+      return Object.keys(cleanRow).length > 0 ? cleanRow : null;
+    })
+    .filter((row) => row !== null);
+};
+
+/** Major function, deriving JSON Values and normalize them */
 export const deriveJSONRules = (config) => {
   const output = {};
   logger.info("Starting JSON derivation from configuration...");
@@ -9,63 +55,9 @@ export const deriveJSONRules = (config) => {
     return output;
   }
 
-  /**
-   * Trims value if it's a string, otherwise returns value as-is
-   */
-  const trimIfString = (val) => (typeof val === "string" ? val.trim() : val);
-
-  const isEmpty = (val) => {
-    if (val === undefined || val === null) return true;
-    const trimmed = trimIfString(val);
-    if (typeof trimmed === "string") return trimmed.length === 0;
-    return false;
-  };
-
-  /**
-   * Helper to process table field rows with deep tracing
-   */
-  const processTableValue = (rows, columns, fieldId) => {
-    if (!Array.isArray(rows) || !Array.isArray(columns)) {
-      logger.error(`[Table: ${fieldId}] Validation failed: rows or columns are not arrays.`);
-      return [];
-    }
-
-    logger.info(`[Table: ${fieldId}] Processing ${rows.length} rows against ${columns.length} columns.`);
-
-    return rows
-      .map((row, index) => {
-        const cleanRow = {};
-
-        for (const col of columns) {
-          // Trim the key we are looking for just in case the column definition has whitespace
-          const colKey = trimIfString(col.key);
-
-          // Check dependency logic
-          if (col.dependsOn) {
-            const depValue = trimIfString(row[col.dependsOn]);
-            if (!depValue || depValue === "false") {
-              logger.info(`[Table: ${fieldId}][Row: ${index}] Skipping column '${colKey}' due to dependency '${col.dependsOn}'`);
-              continue;
-            }
-          }
-
-          const val = row[colKey];
-          if (!isEmpty(val)) {
-            // TRIM APPLIED HERE: For values within table rows
-            cleanRow[colKey] = trimIfString(val);
-          } else {
-            logger.info(`[Table: ${fieldId}][Row: ${index}] Column '${colKey}' is empty or whitespace, excluding.`);
-          }
-        }
-
-        return Object.keys(cleanRow).length > 0 ? cleanRow : null;
-      })
-      .filter((row) => row !== null);
-  };
-
   config.forEach((section) => {
     // TRIM APPLIED HERE: Section Key
-    const sectionName = trimIfString(section.sectionKey) || "Unknown Section";
+    const sectionName = trimString(section.sectionKey) || "Unknown Section";
     logger.info(`Processing Section: [${sectionName}]`);
 
     const sectionData = {};
@@ -77,7 +69,7 @@ export const deriveJSONRules = (config) => {
     }
 
     section.fields.forEach((field) => {
-      const fieldId = trimIfString(field.id);
+      const fieldId = trimString(field.id);
       const fieldLogId = `Field: ${fieldId || 'unnamed'}`;
 
       if (field.isActive === false || field.isLocked) {
@@ -100,8 +92,8 @@ export const deriveJSONRules = (config) => {
         let columns = field.columns
           .filter(curr => curr.canConditional === true || !isEmpty(curr.dependsOn))
           .map(curr => ({
-            key: trimIfString(curr.key),
-            dependsOn: trimIfString(curr.dependsOn),
+            key: trimString(curr.key),
+            dependsOn: trimString(curr.dependsOn),
             canConditional: curr.canConditional
           }));
 
@@ -112,7 +104,7 @@ export const deriveJSONRules = (config) => {
           return;
         }
         // TRIM APPLIED HERE: Standard field values
-        valueToInclude = trimIfString(valueToInclude);
+        valueToInclude = trimString(valueToInclude);
       }
 
       sectionData[fieldId] = valueToInclude;
@@ -121,7 +113,7 @@ export const deriveJSONRules = (config) => {
     });
 
     if (hasData && section.sectionKey) {
-      output[trimIfString(section.sectionKey)] = sectionData;
+      output[trimString(section.sectionKey)] = sectionData;
     }
   });
 

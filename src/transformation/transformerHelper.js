@@ -1,7 +1,5 @@
 import logger from "../lib/logger.js";
-import { processMetricsRules } from "./metricsProcessor.js";
-import { processReadCodesRules } from "./readCodesProcessor.js";
-import { processGeneralRules } from "./generalProcessor.js";
+import { processGeneric } from "./GenericEngine.js";
 
 /**
  * Helper function to check if transformation should be killed
@@ -19,6 +17,7 @@ export const checkForKill = (result, sectionKey) => {
 
 /**
  * Transforms the input data based on the defined rules in configuration.
+ * Uses the Metadata-Driven Generic Engine.
  */
 export const transformerHelper = (inputData, configRules) => {
     const startTime = Date.now();
@@ -28,58 +27,26 @@ export const transformerHelper = (inputData, configRules) => {
         `Configuration has ${Object.keys(configRules).length} sections`
     );
 
-    for (const [sectionKey, sectionRules] of Object.entries(configRules)) {
-        logger.info(`[Section: ${sectionKey}] Started processing...`);
+    try {
+        // The Generic Engine handles all sections based on metadata
+        const output = processGeneric(transformed, configRules);
 
-        if (!sectionRules || typeof sectionRules !== "object") {
-            logger.error(`[Section: ${sectionKey}] Invalid section rules object`);
-            return inputData;
+        // Check for KILL
+        if (output && output.isKilled) {
+            const killCheck = checkForKill(output, output.sectionKey || "Unknown");
+            if (killCheck) return killCheck;
         }
 
-        try {
-            let result;
+        // Merge output into transformed data
+        transformed = { ...transformed, ...output };
 
-            // 1. Process Metrics
-            if (sectionKey === "metrics") {
-                result = processMetricsRules(transformed, sectionRules);
-
-                const killCheck = checkForKill(result, sectionKey);
-                if (killCheck) return killCheck;
-
-                transformed = result;
-            }
-            // 2. Process ReadCodes & OptionalCodes (combined processing)
-            else if (sectionKey === "readCodes" || sectionKey === "optional_codes") {
-                if (sectionKey === "readCodes") {
-                    const optionalRules = configRules.optional_codes || {};
-                    result = processReadCodesRules(transformed, sectionRules, optionalRules);
-
-                    const killCheck = checkForKill(result, sectionKey);
-                    if (killCheck) return killCheck;
-
-                    transformed = result;
-                } else {
-                    // Skip 'optional_codes' as it's handled during 'readCodes' processing
-                    continue;
-                }
-            }
-            // 3. Default behavior for other sections
-            else {
-                result = processGeneralRules(transformed, sectionRules);
-
-                const killCheck = checkForKill(result, sectionKey);
-                if (killCheck) return killCheck;
-
-                transformed = result;
-            }
-        } catch (error) {
-            /** Stop the execution */
-            logger.error(`[Section: ${sectionKey}] Error processing section:`, {
-                error: error.message,
-                stack: error.stack,
-            });
-            throw new Error(`[Section: ${sectionKey}] Error processing section: ${error.message}`);
-        }
+    } catch (error) {
+        /** Stop the execution */
+        logger.error(`Transformation Error:`, {
+            error: error.message,
+            stack: error.stack,
+        });
+        throw new Error(`Transformation Error: ${error.message}`);
     }
 
     const totalDuration = Date.now() - startTime;

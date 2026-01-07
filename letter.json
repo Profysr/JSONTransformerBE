@@ -1,126 +1,170 @@
+obj.letter_date
+obj.metrics.height
+
 {
-   "success":true,
-   "message":"Data successfully transformed according to client-specific rules.",
-   "output":{
-      "nhs_id":"4389375105",
-      "letter_id":"052b18705b804e699a6de2eb6302e33f",
-      "file_name":"130-4389375105-05 Nov 2025",
-      "file_sha256":"8b74f0e8301a0faad1c19987ebb6bf073d89664b1e4baaba5f6734b6f388bc00",
-      "imgs_sha256":[
-         "5bd7e5c75259003535d62006bc26231e3718b84612edbc2324a2e92fad93af80",
-         "6ae597d672dcd4e4ea999a48a71e4e8403206e657f51125929db8834f91c2f2e",
-         "e04b590454483d2d8fe16e68d65b15f3125c039f277321dcf31be80b3be04330"
-      ],
-      "approval_date":"05/11/2025 11:46:13",
-      "approved_by":"iqra@kynoby.com",
-      "letter_type":"Ophthalmology",
-      "letter_date":"06-08-2025",
-      "hospital_name":"York Hospital",
-      "department":"Ophthalmology",
-      "incident_date":"06-08-2025",
-      "metrics":[
-         {
-            "c_term":"bp_systolic",
-            "value":"141",
-            "addDate":"false",
-            "read_code_date":null,
-            "child":"2469",
-            "code_type":"metrics"
-         },
-         {
-            "c_term":"bp_diastolic",
-            "value":"70",
-            "addDate":"false",
-            "read_code_date":null,
-            "child":"246A.",
-            "code_type":"metrics"
-         },
-         {
-            "c_term":"heart_rate",
-            "value":"96",
-            "addDate":"false",
-            "read_code_date":null,
-            "child":"X773s",
-            "code_type":"metrics"
-         }
-      ],
-      "diagnosis":"[{'Condition': 'Wet Age-related Macular Degeneration', 'Code': 'F4252', 'Status': 'New', 'Reason': 'Diagnosed in the right eye.'}, {'Condition': 'Dry Age-related Macular Degeneration', 'Code': 'F4251', 'Status': 'New', 'Reason': 'Diagnosed in the left eye.'}]",
-      "treatment_procedure":"[{'Treatment': 'Intravitreal Vabysmo Injection', 'Code': 'X00PF', 'Reason': 'Administered to the right eye for treatment of Wet AMD.'}]",
-      "follow_up":"{'instructions': 'Follow-up in 6 weeks for Macular Degeneration and Diabetes review. Referral to Cataract - New Patient Assessment Clinic.'}",
-      "batch_name":"",
-      "readCodes":{
-         "global_rules":{
-            "use_inactive":"true",
-            "override_bilateral":"true",
-            "search_codes_in_problems":"true"
-         },
-         "letter_codes":"F4252, F4251, XaKqd, F4619, XaIwQ",
-         "letter_codes_list":[
-            {
-               "child":"F4252",
-               "snomed_code":"414173003",
-               "c_term":"Subretinal neovascularisation of macula",
-               "code_type":"diagnosis",
-               "comments":"R",
-               "read_code_date":"2025-08-06T00:00:00Z",
-               "attach_problems":"true",
-               "create_problems":"true",
-               "problem_severity":"Minor",
-               "add_date":true
-            },
-            {
-               "child":"F4251",
-               "snomed_code":"414875008",
-               "c_term":"Atrophic age-related macular degeneration",
-               "code_type":"diagnosis",
-               "comments":"L",
-               "read_code_date":"2025-08-06T00:00:00Z",
-               "attach_problems":"true",
-               "create_problems":"true",
-               "problem_severity":"Minor",
-               "add_date":true
-            },
-            {
-               "child":"XaKqd",
-               "snomed_code":"198291000000105",
-               "c_term":"Letter received",
-               "code_type":null,
-               "comments":null,
-               "read_code_date":null,
-               "attach_problems":"true",
-               "create_problems":"true",
-               "problem_severity":"Minor",
-               "add_date":false
-            },
-            {
-               "child":"F4619",
-               "snomed_code":"193589009",
-               "c_term":"Nuclear senile cataract",
-               "code_type":"diagnosis",
-               "comments":"NA",
-               "read_code_date":"2025-08-06T00:00:00Z",
-               "attach_problems":"true",
-               "create_problems":"true",
-               "problem_severity":"Minor",
-               "add_date":true
-            },
-            {
-               "child":"XaIwQ",
-               "read_code_date":null,
-               "comments":null,
-               "code_type":null,
-               "c_term":"Seen by ambulance crew",
-               "add_date":false,
-               "promote_problem":"Promote to problem",
-               "put_summary":"Put in the summary",
-               "attach_problems":"true",
-               "create_problems":"true",
-               "problem_severity":"Major"
-            }
-         ]
+  "success": true,
+  "message": "Data successfully transformed according to client-specific rules.",
+  "output": {
+    "nhs_id": "4389375105",
+    "letter_id": "052b18705b804e699a6de2eb6302e33f",
+    "letter_codes": "F4252, F4251, XaKqd, F4619",
+    "letter_codes_list": [
+      {
+        "id": 169697,
+        "child": "F4252",
+        "snomed_code": "414173003",
+        "c_term": "Subretinal neovascularisation of macula",
+        "qof": true,
+        "qof_flags": [],
+        "code_type": "diagnosis",
+        "comments": "R",
+        "read_code_date": "2025-08-06T00:00:00Z"
       },
-      "fileaway":"true",
-      "choose_flag":"true",
-      "flag_color":"Pink"
-   }
+      {
+        "id": 117001,
+        "child": "F4251",
+        "snomed_code": "414875008",
+        "c_term": "Atrophic age-related macular degeneration",
+        "qof": true,
+        "qof_flags": [],
+        "code_type": "diagnosis",
+        "comments": "L",
+        "read_code_date": "2025-08-06T00:00:00Z"
+      },
+      {
+        "id": 180749,
+        "child": "XaKqd",
+        "snomed_code": "198291000000105",
+        "c_term": "Letter received",
+        "qof": false,
+        "qof_flags": [],
+        "code_type": null,
+        "comments": null,
+        "read_code_date": null
+      },
+      {
+        "id": 24629,
+        "child": "F4619",
+        "snomed_code": "193589009",
+        "c_term": "Nuclear senile cataract",
+        "qof": false,
+        "qof_flags": [],
+        "code_type": "diagnosis",
+        "comments": "NA",
+        "read_code_date": "2025-08-06T00:00:00Z"
+      }
+    ],
+    "file_name": "130-4389375105-05 Nov 2025",
+    "file_sha256": "8b74f0e8301a0faad1c19987ebb6bf073d89664b1e4baaba5f6734b6f388bc00",
+    "imgs_sha256": [
+      "5bd7e5c75259003535d62006bc26231e3718b84612edbc2324a2e92fad93af80",
+      "6ae597d672dcd4e4ea999a48a71e4e8403206e657f51125929db8834f91c2f2e",
+      "e04b590454483d2d8fe16e68d65b15f3125c039f277321dcf31be80b3be04330"
+    ],
+    "approval_date": "05/11/2025 11:46:13",
+    "approved_by": "iqra@kynoby.com",
+    "letter_type": "Ophthalmology",
+    "letter_date": "06-08-2025",
+    "hospital_name": "York Hospital",
+    "department": "Ophthalmology",
+    "incident_date": "06-08-2025",
+    "metrics": [
+      {
+        "c_term": "bp_systolic",
+        "value": "141",
+        "addDate": "false",
+        "child": "2469",
+        "code_type": "metrics"
+      },
+      {
+        "c_term": "bp_diastolic",
+        "value": "70",
+        "addDate": "false",
+        "child": "246A.",
+        "code_type": "metrics"
+      },
+      {
+        "c_term": "heart_rate",
+        "value": "96",
+        "addDate": "false",
+        "child": "X773s",
+        "code_type": "metrics"
+      }
+    ],
+    "diagnosis": "[{'Condition': 'Wet Age-related Macular Degeneration', 'Code': 'F4252', 'Status': 'New', 'Reason': 'Diagnosed in the right eye.'}, {'Condition': 'Dry Age-related Macular Degeneration', 'Code': 'F4251', 'Status': 'New', 'Reason': 'Diagnosed in the left eye.'}]",
+    "treatment_procedure": "[{'Treatment': 'Intravitreal Vabysmo Injection', 'Code': 'X00PF', 'Reason': 'Administered to the right eye for treatment of Wet AMD.'}]",
+    "follow_up": "{'instructions': 'Follow-up in 6 weeks for Macular Degeneration and Diabetes review. Referral to Cataract - New Patient Assessment Clinic.'}",
+    "batch_name": "",
+    "readCodes": [
+      {
+        "c_term": "Subretinal neovascularisation of macula",
+        "addDate": "false",
+        "read_code_date": "2025-08-06T00:00:00Z",
+        "child": "F4252",
+        "code_type": "diagnosis",
+        "comments": "R",
+        "attach_problems": "true",
+        "create_problems": "true",
+        "problem_severity": "Minor",
+        "use_inactive": "true",
+        "override_bilateral": "true",
+        "search_codes_in_problems": "true"
+      },
+      {
+        "c_term": "Atrophic age-related macular degeneration",
+        "addDate": "false",
+        "read_code_date": "2025-08-06T00:00:00Z",
+        "child": "F4251",
+        "code_type": "diagnosis",
+        "comments": "L",
+        "attach_problems": "true",
+        "create_problems": "true",
+        "problem_severity": "Minor",
+        "use_inactive": "true",
+        "override_bilateral": "true",
+        "search_codes_in_problems": "true"
+      },
+      {
+        "c_term": "Letter received",
+        "addDate": "false",
+        "read_code_date": null,
+        "child": "XaKqd",
+        "code_type": null,
+        "comments": null,
+        "problem_severity": "Minor",
+        "use_inactive": "true",
+        "override_bilateral": "true",
+        "search_codes_in_problems": "true"
+      },
+      {
+        "c_term": "Nuclear senile cataract",
+        "addDate": "false",
+        "read_code_date": "2025-08-06T00:00:00Z",
+        "child": "F4619",
+        "code_type": "diagnosis",
+        "comments": "NA",
+        "attach_problems": "true",
+        "create_problems": "true",
+        "problem_severity": "Minor",
+        "use_inactive": "true",
+        "override_bilateral": "true",
+        "search_codes_in_problems": "true"
+      },
+      {
+        "c_term": "Seen by ambulance crew",
+        "addDate": "true",
+        "read_code_date": null,
+        "child": "XaIwQ",
+        "code_type": null,
+        "comments": null,
+        "problem_severity": "Major",
+        "use_inactive": "true",
+        "override_bilateral": "true",
+        "search_codes_in_problems": "true"
+      }
+    ],
+    "fileaway": "true",
+    "choose_flag": "true",
+    "flag_color": "Pink"
+  }
 }
