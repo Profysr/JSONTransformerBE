@@ -38,7 +38,7 @@ export const SectionRegistry = {
                 field: "add_date",
                 transform: ["toBoolean", "toString"]
             },
-            read_code_date: { field: "read_code_date" },
+            read_code_date: { field: "date_type" },
             child: { field: "child" },
             code_type: { field: "code_type" },
             comments: { field: "comments" },

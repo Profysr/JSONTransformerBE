@@ -1,84 +1,10 @@
 {
   "letter_type_configuration": {
-    "letter_date": "var(incident_date)"
-  },
-  "rpa_note_checks": {
-    "batch_name": {
-      "else": {
-        "value": "",
-        "isKilled": false
-      },
-      "type": "cascading-advanced",
-      "clauses": [
-        {
-          "rules": [
-            {
-              "id": "14c3e7f7-7508-4597-a4ed-04341b724568",
-              "type": "condition",
-              "field": "var(rpa_note)",
-              "value": "Action Required",
-              "operator": "contains",
-              "caseSensitive": false
-            }
-          ],
-          "outcome": {
-            "value": "GP Action Required",
-            "isKilled": true
-          },
-          "rootLogicType": "AND"
-        },
-        {
-          "rules": [
-            {
-              "id": "f99c3bd2-5c7c-43cf-ab81-b7bf254db675",
-              "type": "condition",
-              "field": "var(rpa_note)",
-              "value": "Safeguarding",
-              "operator": "contains",
-              "caseSensitive": false
-            }
-          ],
-          "outcome": {
-            "value": "Safeguarding",
-            "isKilled": true
-          },
-          "rootLogicType": "AND"
-        }
-      ]
-    }
+    "hospital_name": "NHS 111",
+    "department": "\u003Cskip\u003E"
   },
   "readCodes": {
-    "add_readcodes": "true",
-    "add_date": "true",
-    "date_type": "var(read_code_date)",
-    "attach_problems": "true",
-    "create_problems": {
-      "else": {
-        "value": "false",
-        "isKilled": false
-      },
-      "type": "cascading-advanced",
-      "clauses": [
-        {
-          "rules": [
-            {
-              "id": "c1c2e8dd-1c9a-4ea4-921a-70887f178ddb",
-              "type": "condition",
-              "field": "var(read_code_date)",
-              "value": "",
-              "operator": "is_not_empty",
-              "caseSensitive": false
-            }
-          ],
-          "outcome": {
-            "value": "true",
-            "isKilled": false
-          },
-          "rootLogicType": "AND"
-        }
-      ]
-    },
-    "isMajor": "false",
+    "add_readcodes": "false",
     "specific_codes": {
       "columns": [
         {
@@ -112,9 +38,7 @@
       ],
       "value": [
         {
-          "id": "47554bd6-8c97-4a84-a33e-a0caa1c05f41",
-          "child": "8H2..",
-          "c_term": "Refused Hospital",
+          "id": "e59da815-3866-414f-8ebc-184ecd64d849",
           "addCode": true,
           "isMajor": false,
           "add_date": false,
@@ -124,9 +48,7 @@
           "promote_problem": "No"
         },
         {
-          "id": "5f2a14c6-70f9-4ca0-93a6-4679d974d412",
-          "child": "Xaang",
-          "c_term": "Admitted",
+          "id": "54daae16-e02c-4b33-a2d5-81109b968e66",
           "addCode": true,
           "isMajor": false,
           "add_date": false,
@@ -134,15 +56,6 @@
           "child_code": "Xaang - Admitted",
           "put_summary": "No",
           "promote_problem": "No"
-        },
-        {
-          "id": "11a92043-fecd-452b-9f61-a08b22f22bfa",
-          "child": "XaKqd",
-          "c_term": "Letter Received",
-          "addCode": false,
-          "isMajor": true,
-          "add_date": true,
-          "child_code": "XaKqd - Letter Received"
         }
       ]
     }
@@ -170,48 +83,43 @@
       ],
       "value": [
         {
-          "id": "57798295-09d4-42a5-8ee0-688ac094fdf2",
+          "id": "0064967c-1ed8-4fcb-b43d-caca18dd1761",
           "metric": "blood_pressure",
           "add_date": false,
-          "add_metric": true,
-          "metric_codes": "2469/246A."
+          "add_metric": false
         },
         {
-          "id": "8ed59a21-a6f8-4497-b591-fdeffa76b202",
+          "id": "535b39f9-c33e-4e74-8869-b22c6fa6b560",
           "metric": "weight",
-          "add_date": true,
-          "date_type": "var(weight_date)",
-          "add_metric": true,
-          "metric_codes": "227.."
+          "add_date": false,
+          "add_metric": false
         },
         {
-          "id": "d26a7e18-e6ce-40fc-91b7-204c29b9a0b8",
+          "id": "5665dc6c-3ad0-41a7-a7f6-9835024fbc05",
           "metric": "height",
           "add_date": false,
-          "add_metric": true,
-          "metric_codes": "229.."
+          "add_metric": false
         },
         {
-          "id": "714cbc91-b4f1-4b72-80b1-576325a56765",
+          "id": "cebe19c3-2909-4a06-8248-3a6b49d2c91a",
           "metric": "bmi",
           "add_date": false,
-          "add_metric": true,
-          "metric_codes": "22K.."
+          "add_metric": false
         },
         {
-          "id": "f3f4f986-10f6-4fee-becb-8dcbb2c131b4",
+          "id": "cd9dddc9-1277-434e-8b8e-65de5f72f20d",
           "metric": "heart_rate",
           "add_date": false,
           "add_metric": false
         },
         {
-          "id": "f406d9ac-1551-449c-aff6-fff754f27dfb",
+          "id": "d6cd9fea-f24f-43b8-b171-e41042a08a40",
           "metric": "o2_level",
           "add_date": false,
           "add_metric": false
         },
         {
-          "id": "6513451a-eae5-471d-874f-894320e69ea4",
+          "id": "6ec014bd-729d-4b0d-918e-41ac157dace5",
           "metric": "smoker",
           "add_date": false,
           "add_metric": false
@@ -220,8 +128,6 @@
     }
   },
   "forward_letter": {
-    "fileaway": "true",
-    "choose_flag": "true",
-    "flag_color": "URGENT"
+    "forwardLetter": "false"
   }
 }

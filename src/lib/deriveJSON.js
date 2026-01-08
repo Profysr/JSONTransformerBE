@@ -72,12 +72,20 @@ export const deriveJSONRules = (config) => {
       const fieldId = trimString(field.id);
       const fieldLogId = `Field: ${fieldId || 'unnamed'}`;
 
-      if (field.isActive === false || field.isLocked) {
-        logger.info(`[${sectionName}][${fieldLogId}] Skipped: Inactive or Locked.`);
+      if (field.isActive === false) {
+        logger.info(`[${sectionName}][${fieldLogId}] Skipped: Inactive`);
         return;
       }
 
       let valueToInclude = field.value;
+
+      // Handle <skip> instruction: Set to null if value is "<skip>"
+      if (typeof valueToInclude === "string" && (valueToInclude === "<skip>" || valueToInclude === "\u003Cskip\u003E")) {
+        logger.info(`[${sectionName}][${fieldLogId}] Skip instruction detected, setting value to null.`);
+        sectionData[fieldId] = null;
+        hasData = true; // Still consider it data to keep the field in output but as null
+        return;
+      }
 
       if (field.type === "table") {
         logger.info(`[${sectionName}][${fieldLogId}] Entering table processing...`);

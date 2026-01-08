@@ -46,7 +46,7 @@ app.use(errorMiddleware);
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log(
-    `Use POST request to http://localhost:${PORT}/api/v1/transform with your raw JSON in the body.`
+    `Use POST request to http://localhost:${PORT}/api/v1/transform/<client_id>/ with your raw JSON in the body.`
   );
 });
 

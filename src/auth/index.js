@@ -9,7 +9,7 @@ const setData = (key, value) => {
   tokenStore[key] = value;
 };
 
-const key = (type, server) => `${type}_${SERVERS[server].Name}`;
+const key = (type, server) => `${type}_${server}`;
 
 function saveData(server, data) {
   setData(key("access_token", server), data.access);
