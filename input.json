@@ -113,6 +113,8 @@
       "value": [
         {
           "id": "47554bd6-8c97-4a84-a33e-a0caa1c05f41",
+          "child": "8H2..",
+          "c_term": "Refused Hospital",
           "addCode": true,
           "isMajor": false,
           "add_date": false,
@@ -123,6 +125,8 @@
         },
         {
           "id": "5f2a14c6-70f9-4ca0-93a6-4679d974d412",
+          "child": "Xaang",
+          "c_term": "Admitted",
           "addCode": true,
           "isMajor": false,
           "add_date": false,
