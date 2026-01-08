@@ -2,49 +2,34 @@
  * SectionRegistry.js
  * 
  * Central metadata store defining how each configuration section should be processed.
- * This is the ONLY place where section-specific behavior is defined.
- * 
- * Adding a new section = adding metadata here. No code changes needed.
+ * Driven by two main scopes: 'global' (single object) and 'collection' (array of objects).
  */
 
 export const SectionRegistry = {
     // ========================================
-    // GLOBAL SECTIONS
+    // GLOBAL SECTIONS (Root-level values)
     // ========================================
 
-    letter_type_configuration: {
-        processingScope: "global",
-        outputPath: null,  // Merge into root output
-        fieldMappings: {},
-        excludeFields: []
-    },
-
-    rpa_note_checks: {
-        processingScope: "global",
-        outputPath: null,  // Merge into root
-        fieldMappings: {},
-        excludeFields: []
-    },
-
-    forward_letter: {
-        processingScope: "global",
-        outputPath: null,  // Merge into root
-        fieldMappings: {},
-        excludeFields: []
-    },
-
     // ========================================
-    // COLLECTION SECTIONS (Input-Driven)
+    // COLLECTION SECTIONS (Mapped to arrays)
     // ========================================
 
     readCodes: {
         processingScope: "collection",
-        inputPath: "letter_codes_list",      // Where to find input data
-        outputPath: "readCodes",              // Where to store result
-        itemKey: "child",                     // Unique identifier for logging
+        inputPath: "letter_codes_list",      // Array in input JSON to seed items
+        outputPath: "letter_codes_list",     // Output array destination
+        itemKey: "child",                    // Unique identifier for matching items
+        tables: ["specific_codes"],          // Internal tables to process/merge
 
-        // Global rules (extracted separately from collection processing)
-        globalRules: ["use_inactive", "override_bilateral", "search_codes_in_problems"],
+        // Global skip field: if false, return empty array
+        globalSkipField: "add_readcodes",
+
+        // Specialized logic for the 'specific_codes' table
+        rowProcessor: "specificCodesRowProcessor",
+        skipField: "addCode",                // Column in specific_codes to trigger skip/remove
+
+        // Global rules evaluated once per section (at root context)
+        generalRules: [],
 
         // Output template (Strict structure definition)
         outputTemplate: {
@@ -79,32 +64,29 @@ export const SectionRegistry = {
             override_bilateral: { field: "override_bilateral" },
             search_codes_in_problems: { field: "search_codes_in_problems" }
         },
-
-        // Secondary rules to merge (e.g., optional_codes)
-        secondaryRules: ["optional_codes"]
     },
 
-    // ========================================
-    // TABLE SECTIONS (Config-Driven)
-    // ========================================
-
     metrics: {
-        processingScope: "table",
-        configPath: "metrics_list",           // Table in config to iterate
-        inputPath: "metrics",                 // Where to find input values
-        outputPath: "metrics",                // Where to store result
-        matchStrategy: "caseInsensitiveKey",  // How to match config row to input
+        processingScope: "collection",
+        inputPath: "metrics",                // Object in input JSON (not array)
+        outputPath: "metrics",               // Output as array of objects
+        itemKey: "metricName",               // Identifier (e.g. 'bp_systolic') - supports split items
+        tables: ["metrics_list"],            // Table drives item generation
 
-        // Row processor function name
+        // Don't seed from input - build from table only
+        seedFromInput: false,
+
+        // The 'metrics_list' table in config drives the item generation
         rowProcessor: "metricsRowProcessor",
+        skipField: "add_metric",             // Column in metrics_list to trigger skip
 
-        // Special case handlers
+        // Special case handlers (e.g. for BP splitting)
         specialCases: {
             "blood_pressure": "splitBP",
             "bp": "splitBP"
         },
 
-        // Output template for standard metrics
+        // Final shape of each metric item
         outputTemplate: {
             c_term: { field: "metricName" },
             value: {
@@ -118,19 +100,6 @@ export const SectionRegistry = {
             read_code_date: { field: "date_type" },
             child: { field: "metric_codes" },
             code_type: "metrics"
-        },
-
-        // Fields to exclude from pass-through
-        excludeFields: ["metric", "add_metric", "add_date", "date_type", "metric_codes", "id", "value"]
-    },
-
-    // ========================================
-    // SECONDARY RULES (Merged into other sections)
-    // ========================================
-
-    optional_codes: {
-        processingScope: "secondary",
-        targetSection: "readCodes",  // Merge into this section
-        tables: ["specific_problem_links", "specific_read_codes"]
+        }
     }
 };

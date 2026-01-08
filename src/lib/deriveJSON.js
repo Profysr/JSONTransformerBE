@@ -1,5 +1,5 @@
+import { isEmpty, trimString } from "../utils/utils.js";
 import logger from "./logger.js";
-import { isEmpty, trimString } from "./utils.js";
 
 /**
  * Helper to process table field rows with deep tracing

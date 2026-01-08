@@ -1,1 +1,223 @@
-{"config": [{"icon": "Settings", "title": "Letter Type Configuration", "fields": [{"id": "letter_type", "type": "logic_input", "label": "Letter type", "value": "", "isActive": true, "isLocked": true, "helperText": "If you want to remap letter-type name, Enter new name? (Optional). e.g: map 'A&E' into 'Accident and Emergency'"}, {"id": "letter_date", "type": "logic_input", "label": "Letter Date", "value": "var(incident_date) ", "isActive": true, "isLocked": false, "helperText": "Select the field that holds the letter date. This field supports referencing JSON fields."}, {"id": "hospital_name", "type": "logic_input", "label": "Hospital Name", "value": "", "isActive": true, "isLocked": true, "helperText": "Enter the default hospital name."}, {"id": "department", "type": "logic_input", "label": "Department", "value": "", "isActive": true, "isLocked": true, "helperText": "Enter the default department name."}], "sectionKey": "letter_type_configuration", "isCollapsed": false}, {"icon": "ClipboardCheck", "title": "RPA Note Checks", "fields": [{"id": "batch_name", "type": "logic_input", "label": "Batch Name", "value": {"else": {"value": "", "isKilled": false}, "type": "cascading-advanced", "clauses": [{"rules": [{"id": "14c3e7f7-7508-4597-a4ed-04341b724568", "type": "condition", "field": "var(rpa_note)", "value": "Action Required", "operator": "contains", "caseSensitive": false}], "outcome": {"value": "GP Action Required", "isKilled": true}, "rootLogicType": "AND"}, {"rules": [{"id": "f99c3bd2-5c7c-43cf-ab81-b7bf254db675", "type": "condition", "field": "var(rpa_note)", "value": "Safeguarding", "operator": "contains", "caseSensitive": false}], "outcome": {"value": "Safeguarding", "isKilled": true}, "rootLogicType": "AND"}]}, "isActive": true, "isLocked": false, "helperText": "Define your batch name if you want to flag RPA Exceptions. If you don't want to flag them, just write notes for recipient'"}], "sectionKey": "rpa_note_checks", "isCollapsed": false}, {"icon": "Hash", "title": "E2E Read Codes", "fields": [{"id": "add_readcodes", "type": "boolean", "label": "Add Read Codes", "value": "true", "isActive": true, "helperText": "Do you want to add read codes, defined in the tool?"}, {"id": "add_date", "type": "boolean", "label": "Add Date with ReadCode", "value": "true", "isActive": true, "helperText": "Do you want to add date with read codes? "}, {"id": "date_type", "type": "dropdown", "label": "Date Type for Read code", "value": "var(read_code_date)", "options": [{"id": "letter_date", "label": "Letter Date", "jsonField": true}, {"id": "read_code_date", "label": "Read Code Date", "jsonField": true}], "isActive": true, "helperText": "Specify the default date type for read code. Do you want to use letter date or associated read code date? --help: use var(<<var_name>>)", "isConditional": true, "conditionField": "add_date"}, {"id": "attach_problems", "type": "boolean", "label": "Attach to Problem Links", "value": "true", "isActive": true, "helperText": "Do you want to add diagnosis codes using Problem Links?"}, {"id": "create_problems", "type": "boolean", "label": "Create Problem Links", "value": {"else": {"value": "false", "isKilled": false}, "type": "cascading-advanced", "clauses": [{"rules": [{"id": "c1c2e8dd-1c9a-4ea4-921a-70887f178ddb", "type": "condition", "field": "var(read_code_date)", "value": "", "operator": "is_not_empty", "caseSensitive": false}], "outcome": {"value": "true", "isKilled": false}, "rootLogicType": "AND"}]}, "isActive": true, "helperText": "Do you want to create Problem Links if not already exists?"}, {"id": "promote_problem", "type": "dropdown", "label": "Promote Problem", "value": "", "options": ["No", "Promote to problem", "Promote to inactive problem"], "isActive": false, "helperText": "Do you want to create the problem as read code and then promote the problem link?"}, {"id": "put_summary", "type": "dropdown", "label": "Put Summary", "value": "", "options": ["No", "Put in the summary", "Put in the inactive summary"], "isActive": false, "helperText": "Do you want to create the problem as read code and then put in the summary?"}, {"id": "isMajor", "type": "boolean", "label": "Problem Severity (Major)", "value": "false", "isActive": true, "helperText": "Do you want to add all the diagnosis as Major? (General)?"}, {"id": "add_endDate_problem", "type": "boolean", "label": "Add End Date for Problems", "value": "", "isActive": false, "helperText": "Do you want to add end date when creating new Problem link. By default, we add only start date."}, {"id": "endDate_duration", "type": "input", "label": "Define the End Month Duration (in months)", "value": "", "isActive": false, "helperText": "Write down the duration in months. For example: if you want to add 1 Year as End Date for a problem, write 12 in input field", "isConditional": true, "conditionField": "add_endDate_problem"}, {"id": "use_inactive", "type": "boolean", "label": "Use InActive Problem Links", "value": "", "isActive": false, "helperText": "if you want to use inactive problem links, in case active problem link is not already exist"}, {"id": "override_bilateral", "type": "boolean", "label": "Override Bilateral", "value": "", "isActive": false, "helperText": "if we search for code with laterality right|left but code with laterality bilateral already exist, then the automation override left with bilateral"}, {"id": "search_codes_in_problems", "type": "boolean", "label": "Seach Read Codes in Problem Links", "value": "", "isActive": false, "helperText": "Look for read codes in Problem Links Table. If it already exists, then attach to it, otherwise add them as read codes"}, {"id": "specific_codes", "type": "table", "label": "Specific Codes Transformation", "value": [{"id": "47554bd6-8c97-4a84-a33e-a0caa1c05f41", "addCode": true, "isMajor": false, "add_date": false, "code_type": "null", "child_code": "8H2.. - Refused Hospital", "put_summary": "No", "forcedMappings": "", "promote_problem": "No"}, {"id": "5f2a14c6-70f9-4ca0-93a6-4679d974d412", "addCode": true, "isMajor": false, "add_date": false, "code_type": "null", "child_code": "Xaang - Admitted", "put_summary": "No", "forcedMappings": "", "promote_problem": "No"}, {"id": "11a92043-fecd-452b-9f61-a08b22f22bfa", "child": "XaKqd", "c_term": "Letter Received", "addCode": false, "isMajor": true, "add_date": true, "code_type": "", "child_code": "XaKqd - Letter Received", "put_summary": "", "forcedMappings": "", "promote_problem": ""}], "columns": [{"key": "child_code", "type": "input", "label": "Child Code"}, {"key": "addCode", "type": "boolean", "label": "Add Code?", "helperText": "Select Yes/No OR Define your condition when to add this diagnosis code?", "parentField": true, "canConditional": true}, {"key": "code_type", "type": "dropdown", "label": "Code Type", "options": ["Null", "Procedure", "Diagnosis"], "canConditional": true}, {"key": "add_date", "type": "boolean", "label": "Add Date?", "helperText": "We'll be adding only letter date if you select this option", "canConditional": true}, {"key": "promote_problem", "type": "dropdown", "label": "Promote Problem", "options": ["No", "Promote to problem", "Promote to inactive problem"], "canConditional": true}, {"key": "put_summary", "type": "dropdown", "label": "Put Summary", "options": ["No", "Put in the summary", "Put in the inactive summary"], "canConditional": true}, {"key": "isMajor", "type": "boolean", "label": "Major?", "helperText": "Do you want to add this code as Major in Problem Links?", "canConditional": true}, {"key": "forcedMappings", "type": "logic", "label": "Forced Mappings", "helperText": "Define mappings for this diagnosis code. E.g., map 'abc' to 'xyz' laterality.", "canConditional": true}], "isActive": true, "helperText": "Search and manage specific codes, their behaviours, and forced mappings. Define conditions for each code. If these codes are already present in the list, we'll modify it, other create it according to the rules"}], "sectionKey": "readCodes", "isCollapsed": false}, {"icon": "BarChart3", "title": "Metrics", "fields": [{"id": "metrics_list", "type": "table", "label": "Metrics List", "value": [{"id": "57798295-09d4-42a5-8ee0-688ac094fdf2", "metric": "blood_pressure", "add_date": false, "date_type": "", "add_metric": true, "metric_codes": "2469/246A."}, {"id": "8ed59a21-a6f8-4497-b591-fdeffa76b202", "metric": "weight", "add_date": true, "date_type": "var(weight_date)", "add_metric": true, "metric_codes": "227.."}, {"id": "d26a7e18-e6ce-40fc-91b7-204c29b9a0b8", "metric": "height", "add_date": false, "date_type": "", "add_metric": true, "metric_codes": "229.."}, {"id": "714cbc91-b4f1-4b72-80b1-576325a56765", "metric": "bmi", "add_date": false, "date_type": "", "add_metric": true, "metric_codes": "22K.."}, {"id": "f3f4f986-10f6-4fee-becb-8dcbb2c131b4", "metric": "heart_rate", "add_date": false, "date_type": "", "add_metric": false, "metric_codes": "X773s"}, {"id": "f406d9ac-1551-449c-aff6-fff754f27dfb", "metric": "o2_level", "add_date": false, "date_type": "", "add_metric": false, "metric_codes": "X77cx"}, {"id": "6513451a-eae5-471d-874f-894320e69ea4", "metric": "smoker", "add_date": false, "date_type": "", "add_metric": false, "metric_codes": "X77cx"}], "columns": [{"key": "metric", "type": "input", "label": "Metrics Name"}, {"key": "add_metric", "type": "boolean", "label": "Add Metric?", "parentField": true, "canConditional": true}, {"key": "metric_codes", "type": "input", "label": "Metric Code", "dependsOn": "add_metric"}, {"key": "add_date", "type": "boolean", "label": "Add Date?", "canConditional": true}, {"key": "date_type", "type": "dropdown", "label": "Date Type", "options": [{"id": "letter_date", "label": "Letter Date", "jsonField": true}, {"id": "incident_date", "label": "Incident Date", "jsonField": true}, {"id": "weight_date", "label": "Weight Date", "jsonField": true}], "dependsOn": "add_date", "canConditional": true}], "isActive": true, "helperText": "Manage metrics, their codes, and associated dates.", "enableSearch": false}], "sectionKey": "metrics", "isCollapsed": false}, {"icon": "Send", "title": "Assignment of Letter (Forwarding)", "fields": [{"id": "fileaway", "type": "boolean", "label": "File Away Letter", "value": "true", "isActive": true, "helperText": "Do you want to complete the letter instead of forwarding?"}, {"id": "forwarding_type", "type": "dropdown", "label": "Forward Type", "value": "", "options": ["User Group", "Team", "Staff"], "isActive": true, "helperText": "where do you want to forward the letter (Usergroup, Team, Staff)", "isConditional": true, "conditionField": "fileaway"}, {"id": "forwarding_to", "type": "logic_input", "label": "Forward Letter", "value": "", "presets": [{"id": "Kynoby Coding", "label": "Kynoby Coding"}, {"id": "Kynoby Ophthalmology", "label": "Kynoby Ophthalmology"}], "isActive": true, "isLocked": false, "helperText": "where do you want to forward the letter (Usergroup: Kynoby Coding)", "isConditional": true, "conditionField": "fileaway"}, {"id": "send_task", "type": "boolean", "label": "Send Task", "value": "", "isActive": false, "helperText": "Do you want to send this letter as task?"}, {"id": "send_task_type", "type": "dropdown", "label": "Send Task Type", "value": "", "options": [{"id": "Usergroup", "label": "User Group"}, {"id": "Team", "label": "Team"}, {"id": "Staff", "label": "Staff"}], "isActive": true, "helperText": "where do you want to forward the letter (Usergroup, Team, Staff)", "isConditional": true, "conditionField": "send_task"}, {"id": "send_task_to", "type": "logic_input", "label": "Send Task to", "value": "", "isActive": true, "isLocked": false, "helperText": "where do you want to send the letter as a task (Kynoby Coding)", "isConditional": true, "conditionField": "send_task"}, {"id": "choose_flag", "type": "boolean", "label": "Choose Flag", "value": "true", "isActive": true, "helperText": "Do you want to choose flag?"}, {"id": "flag_color", "type": "dropdown", "label": "Flag Color", "value": "URGENT", "options": [{"id": "URGENT", "label": "URGENT"}, {"id": "Green", "label": "Green"}, {"id": "Pink", "label": "Pink"}, {"id": "Yellow", "label": "Yellow"}, {"id": "Black", "label": "Black"}], "isActive": true, "helperText": "Define Flag Color", "isConditional": true, "conditionField": "choose_flag"}], "sectionKey": "forward_letter", "isCollapsed": false}]}
+{
+  "letter_type_configuration": {
+    "letter_date": "var(incident_date)"
+  },
+  "rpa_note_checks": {
+    "batch_name": {
+      "else": {
+        "value": "",
+        "isKilled": false
+      },
+      "type": "cascading-advanced",
+      "clauses": [
+        {
+          "rules": [
+            {
+              "id": "14c3e7f7-7508-4597-a4ed-04341b724568",
+              "type": "condition",
+              "field": "var(rpa_note)",
+              "value": "Action Required",
+              "operator": "contains",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "GP Action Required",
+            "isKilled": true
+          },
+          "rootLogicType": "AND"
+        },
+        {
+          "rules": [
+            {
+              "id": "f99c3bd2-5c7c-43cf-ab81-b7bf254db675",
+              "type": "condition",
+              "field": "var(rpa_note)",
+              "value": "Safeguarding",
+              "operator": "contains",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "Safeguarding",
+            "isKilled": true
+          },
+          "rootLogicType": "AND"
+        }
+      ]
+    }
+  },
+  "readCodes": {
+    "add_readcodes": "true",
+    "add_date": "true",
+    "date_type": "var(read_code_date)",
+    "attach_problems": "true",
+    "create_problems": {
+      "else": {
+        "value": "false",
+        "isKilled": false
+      },
+      "type": "cascading-advanced",
+      "clauses": [
+        {
+          "rules": [
+            {
+              "id": "c1c2e8dd-1c9a-4ea4-921a-70887f178ddb",
+              "type": "condition",
+              "field": "var(read_code_date)",
+              "value": "",
+              "operator": "is_not_empty",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "true",
+            "isKilled": false
+          },
+          "rootLogicType": "AND"
+        }
+      ]
+    },
+    "isMajor": "false",
+    "specific_codes": {
+      "columns": [
+        {
+          "key": "addCode",
+          "canConditional": true
+        },
+        {
+          "key": "code_type",
+          "canConditional": true
+        },
+        {
+          "key": "add_date",
+          "canConditional": true
+        },
+        {
+          "key": "promote_problem",
+          "canConditional": true
+        },
+        {
+          "key": "put_summary",
+          "canConditional": true
+        },
+        {
+          "key": "isMajor",
+          "canConditional": true
+        },
+        {
+          "key": "forcedMappings",
+          "canConditional": true
+        }
+      ],
+      "value": [
+        {
+          "id": "47554bd6-8c97-4a84-a33e-a0caa1c05f41",
+          "addCode": true,
+          "isMajor": false,
+          "add_date": false,
+          "code_type": "null",
+          "child_code": "8H2.. - Refused Hospital",
+          "put_summary": "No",
+          "promote_problem": "No"
+        },
+        {
+          "id": "5f2a14c6-70f9-4ca0-93a6-4679d974d412",
+          "addCode": true,
+          "isMajor": false,
+          "add_date": false,
+          "code_type": "null",
+          "child_code": "Xaang - Admitted",
+          "put_summary": "No",
+          "promote_problem": "No"
+        },
+        {
+          "id": "11a92043-fecd-452b-9f61-a08b22f22bfa",
+          "child": "XaKqd",
+          "c_term": "Letter Received",
+          "addCode": false,
+          "isMajor": true,
+          "add_date": true,
+          "child_code": "XaKqd - Letter Received"
+        }
+      ]
+    }
+  },
+  "metrics": {
+    "metrics_list": {
+      "columns": [
+        {
+          "key": "add_metric",
+          "canConditional": true
+        },
+        {
+          "key": "metric_codes",
+          "dependsOn": "add_metric"
+        },
+        {
+          "key": "add_date",
+          "canConditional": true
+        },
+        {
+          "key": "date_type",
+          "dependsOn": "add_date",
+          "canConditional": true
+        }
+      ],
+      "value": [
+        {
+          "id": "57798295-09d4-42a5-8ee0-688ac094fdf2",
+          "metric": "blood_pressure",
+          "add_date": false,
+          "add_metric": true,
+          "metric_codes": "2469/246A."
+        },
+        {
+          "id": "8ed59a21-a6f8-4497-b591-fdeffa76b202",
+          "metric": "weight",
+          "add_date": true,
+          "date_type": "var(weight_date)",
+          "add_metric": true,
+          "metric_codes": "227.."
+        },
+        {
+          "id": "d26a7e18-e6ce-40fc-91b7-204c29b9a0b8",
+          "metric": "height",
+          "add_date": false,
+          "add_metric": true,
+          "metric_codes": "229.."
+        },
+        {
+          "id": "714cbc91-b4f1-4b72-80b1-576325a56765",
+          "metric": "bmi",
+          "add_date": false,
+          "add_metric": true,
+          "metric_codes": "22K.."
+        },
+        {
+          "id": "f3f4f986-10f6-4fee-becb-8dcbb2c131b4",
+          "metric": "heart_rate",
+          "add_date": false,
+          "add_metric": false
+        },
+        {
+          "id": "f406d9ac-1551-449c-aff6-fff754f27dfb",
+          "metric": "o2_level",
+          "add_date": false,
+          "add_metric": false
+        },
+        {
+          "id": "6513451a-eae5-471d-874f-894320e69ea4",
+          "metric": "smoker",
+          "add_date": false,
+          "add_metric": false
+        }
+      ]
+    }
+  },
+  "forward_letter": {
+    "fileaway": "true",
+    "choose_flag": "true",
+    "flag_color": "URGENT"
+  }
+}

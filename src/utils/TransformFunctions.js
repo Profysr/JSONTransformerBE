@@ -1,8 +1,5 @@
 /**
  * TransformFunctions.js
- * 
- * Registry of reusable transformation functions.
- * These functions are referenced by name in SectionRegistry metadata.
  */
 
 export const TransformFunctions = {

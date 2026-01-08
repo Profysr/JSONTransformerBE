@@ -2,22 +2,7 @@ import logger from "../lib/logger.js";
 import { processGeneric } from "./GenericEngine.js";
 
 /**
- * Helper function to check if transformation should be killed
- */
-export const checkForKill = (result, sectionKey) => {
-    if (result && result.isKilled) {
-        logger.error(
-            `[${result.field}] Transformation killed at field: ${result.field}, killValue: ${result.value}`
-        );
-        logger.info("Data transformation killed. Final state:", result.data);
-        return { ...result, sectionKey };
-    }
-    return null;
-};
-
-/**
- * Transforms the input data based on the defined rules in configuration.
- * Uses the Metadata-Driven Generic Engine.
+ * Transforms the input data based on the defined rules in configuration. ✅
  */
 export const transformerHelper = (inputData, configRules) => {
     const startTime = Date.now();
@@ -33,8 +18,11 @@ export const transformerHelper = (inputData, configRules) => {
 
         // Check for KILL
         if (output && output.isKilled) {
-            const killCheck = checkForKill(output, output.sectionKey || "Unknown");
-            if (killCheck) return killCheck;
+            logger.error(
+                `[${output.field}] Transformation killed at field: ${output.field}, killValue: ${output.value}`
+            );
+            logger.info("Data transformation killed. Final state:", output.data);
+            return { ...output, sectionKey };
         }
 
         // Merge output into transformed data

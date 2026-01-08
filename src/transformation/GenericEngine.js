@@ -1,85 +1,92 @@
 import logger from "../lib/logger.js";
 import { SectionRegistry } from "./config/SectionRegistry.js";
 import { RowProcessors } from "./config/RowProcessors.js";
-import { TransformFunctions } from "./config/TransformFunctions.js";
-import { ContextChain } from "../lib/ContextChain.js";
 import { applyRule } from "./ruleApplier.js";
 import { processTableRules } from "./tableProcessor.js";
-import { isEmpty } from "../lib/utils.js";
+import { isEmpty } from "../utils/utils.js";
 import { applyTemplate } from "./TemplateEngine.js";
 
 /**
- * GenericEngine.js
- * 
- * The Universal Transformation Engine.
- * Processes all sections based on metadata from SectionRegistry.
- * NO section-specific logic here - everything is driven by metadata.
- */
-
-/**
- * Main entry point for generic transformation
+ * Main entry point for generic transformation ✅
  */
 export const processGeneric = (inputData, configRules) => {
     const output = {};
-    const consolidatedRules = { ...configRules };
 
-    // Step 1: Handle secondary rules (merge into target sections)
-    for (const [key, rules] of Object.entries(configRules)) {
-        const meta = SectionRegistry[key];
+    // 1. Identify all internal/nested tables to avoid processing them as root sections
+    const internalTables = new Set();
+    Object.values(SectionRegistry).forEach(meta => {
+        if (meta.tables) meta.tables.forEach(t => internalTables.add(t));
+    });
 
-        if (meta?.processingScope === "secondary") {
-            const target = meta.targetSection;
-            if (consolidatedRules[target]) {
-                logger.info(`[GenericEngine] Merging secondary rules from '${key}' into '${target}'`);
-                consolidatedRules[target] = {
-                    ...consolidatedRules[target],
-                    __secondaryRules: { [key]: rules }
-                };
-                delete consolidatedRules[key];
-            }
-        }
-    }
+    for (const [sectionKey, rules] of Object.entries(configRules)) {
+        // Skip if this key is actually an internal table of another section
+        if (internalTables.has(sectionKey)) continue;
 
-    // Step 2: Process each section
-    for (const [sectionKey, rules] of Object.entries(consolidatedRules)) {
-        const meta = SectionRegistry[sectionKey];
-
+        let meta = SectionRegistry[sectionKey];
         if (!meta) {
-            logger.warn(`[GenericEngine] No metadata found for section '${sectionKey}'. Skipping.`);
-            continue;
+            meta = { processingScope: "global", outputPath: null };
         }
 
-        logger.info(`[GenericEngine] Processing section '${sectionKey}' with scope '${meta.processingScope}'`);
+        logger.info(`[GenericEngine] Processing section '${sectionKey}' with '${meta.processingScope}' scope`);
 
         let result;
-
         switch (meta.processingScope) {
             case "collection":
                 result = processCollection(inputData, rules, meta, sectionKey);
-                break;
-            case "table":
-                result = processTable(inputData, rules, meta, sectionKey);
                 break;
             case "global":
                 result = processGlobal(inputData, rules, meta, sectionKey);
                 break;
             default:
-                logger.error(`[GenericEngine] Unknown processing scope: ${meta.processingScope}`);
-                continue;
+                const msg = `[GenericEngine] Unknown processing scope: ${meta.processingScope}. Please check section Registry`;
+                logger.error(msg);
+                throw new Error(msg);
         }
 
-        // Check for KILL
-        if (result && result.isKilled) {
-            logger.error(`[GenericEngine] Section '${sectionKey}' triggered KILL`);
-            return result;
-        }
+        if (result) {
+            if (result.results) {
+                // COLLECTION handling
+                if (result.results.isKilled) {
+                    logger.error(`[GenericEngine] Section '${sectionKey}' triggered KILL`);
+                    return result.results;
+                }
 
-        // Place result in output
-        if (meta.outputPath === null) {
-            // Merge into root
-            Object.assign(output, result);
-        } else {
-            output[meta.outputPath] = result;
+                const actualResult = result.results;
+                let finalValue = actualResult;
+
+                if (meta.outputTemplate) {
+                    logger.info(`[GenericEngine][${sectionKey}] Applying output template...`);
+                    finalValue = actualResult.map(item => {
+                        const context = { ...item, inputData };
+                        return applyTemplate(meta.outputTemplate, context);
+                    });
+                }
+
+                if (meta.outputPath === null) {
+                    Object.assign(output, finalValue);
+                } else {
+                    output[meta.outputPath] = finalValue;
+                }
+
+                if (result.hideKeys) {
+                    result.hideKeys.forEach(k => {
+                        logger.info(`[GenericEngine][${sectionKey}] Hiding internal table root key: ${k}`);
+                        output[k] = null;
+                    });
+                }
+            } else {
+                // GLOBAL handling
+                if (result.isKilled) {
+                    logger.error(`[GenericEngine] Global Section '${sectionKey}' triggered KILL`);
+                    return result;
+                }
+
+                if (meta.outputPath === null) {
+                    Object.assign(output, result);
+                } else {
+                    output[meta.outputPath] = result;
+                }
+            }
         }
     }
 
@@ -87,267 +94,256 @@ export const processGeneric = (inputData, configRules) => {
 };
 
 /**
- * Process a COLLECTION section (Input-Driven)
- * Iterates over an array in inputData and applies rules to each item.
+ * Process a COLLECTION section (Unified for Input Arrays and Config Tables) ✅
  */
 const processCollection = (inputData, rules, meta, sectionKey) => {
-    const collection = inputData[meta.inputPath] || [];
-
-    if (!Array.isArray(collection)) {
-        logger.warn(`[GenericEngine][${sectionKey}] Input path '${meta.inputPath}' is not an array`);
-        return [];
-    }
-
-    logger.info(`[GenericEngine][${sectionKey}] Processing ${collection.length} items from '${meta.inputPath}'`);
-
-    // Extract global rules first
-    const globalRules = extractGlobalRules(inputData, rules, meta);
-
-    // Initialize collection map
     const itemsMap = new Map();
-    collection.forEach(item => {
-        if (item[meta.itemKey]) {
-            itemsMap.set(item[meta.itemKey], { ...item });
-        }
-    });
+    const pendingForcedMappings = {}; // Track ID shifts for final application
+    const inputPathVal = inputData[meta.inputPath];
 
-    // Process secondary rules (e.g., optional_codes tables)
-    const pendingForcedMappings = [];
-    if (rules.__secondaryRules) {
-        for (const [secKey, secRules] of Object.entries(rules.__secondaryRules)) {
-            logger.info(`[GenericEngine][${sectionKey}] Processing secondary rules: ${secKey}`);
-            processSecondaryTables(inputData, secRules, itemsMap, meta, pendingForcedMappings);
+    // 1. Global Skip Field Check: If globalSkipField is false, return empty array immediately
+    if (meta.globalSkipField && rules[meta.globalSkipField] !== undefined) {
+        const globalSkip = applyRule(inputData, rules[meta.globalSkipField], meta.globalSkipField);
+        if (globalSkip === false || globalSkip === "false") {
+            logger.info(`[processCollection][${sectionKey}] Global '${meta.globalSkipField}' is false. Returning empty array.`);
+            return { results: [] };
         }
     }
 
-    // Apply main rules to each item
-    const entries = Array.from(itemsMap.entries());
-    for (const [itemId, item] of entries) {
-        const killResult = applyRulesToItem(inputData, item, rules, meta, sectionKey);
+    // 2. Conditional Seeding: Seed from input only if seedFromInput is not explicitly false
+    const shouldSeed = meta.seedFromInput !== false;
+
+    if (shouldSeed && Array.isArray(inputPathVal)) {
+        logger.info(`[processCollection][${sectionKey}] Seeding from input array '${meta.inputPath}' (${inputPathVal.length} items)`);
+        inputPathVal.forEach(item => {
+            if (item[meta.itemKey]) {
+                itemsMap.set(item[meta.itemKey], { ...item });
+            }
+        });
+    } else if (shouldSeed) {
+        logger.info(`[processCollection][${sectionKey}] Input '${meta.inputPath}' is not an array. Skipping seed.`);
+    } else {
+        logger.info(`[processCollection][${sectionKey}] seedFromInput is false. Starting with empty collection.`);
+    }
+
+    const generalRules = extractGeneralRules(inputData, rules, meta.generalRules);
+
+    // 2. Table Processing: Process all tables defined in registry
+    // Look for tables in both 'rules' (config) and 'inputData' (the source JSON)
+    const tablesToProcess = [];
+    if (meta.tables) {
+        meta.tables.forEach(name => {
+            if (rules[name]) {
+                tablesToProcess.push({ name, config: rules[name] });
+            } else if (inputData[name]) {
+                // Also support tables present directly in the input data
+                tablesToProcess.push({ name, config: inputData[name], isFromData: true });
+            }
+        });
+    }
+
+    const tablesToHide = new Set();
+
+    for (const table of tablesToProcess) {
+        logger.info(`[processCollection][${sectionKey}] Initializing table: ${table.name}`);
+        if (table.isFromData) tablesToHide.add(table.name);
+
+        const killResult = processTableRules(inputData, table.config, {
+            sectionKey: table.name,
+            skipField: null,
+            onRowProcess: (row, inputData) => {
+                const itemId = row[meta.itemKey] || row.child;
+
+                logger.info(`[processCollection][${sectionKey}][Table:${table.name}] Processing row for item: ${itemId}`);
+
+                const rowContext = Array.isArray(inputPathVal)
+                    ? itemsMap.get(itemId)
+                    : inputPathVal;
+
+                if (rowContext) {
+                    logger.info(`[processCollection][${sectionKey}] Found existing context for item: ${itemId}`);
+                }
+
+                const processor = RowProcessors[meta.rowProcessor];
+                const processed = processor ? processor(row, rowContext, meta) : row;
+
+                if (!processed) {
+                    logger.info(`[processCollection][${sectionKey}] Processor returned null for item: ${itemId}`);
+                    return null;
+                }
+
+                if (processed._remove) {
+                    const removeId = processed.identifier || itemId;
+                    logger.info(`[processCollection][${sectionKey}] Removal signal for: ${removeId}`);
+
+                    if (removeId) {
+                        let deleted = false;
+                        for (const [id, item] of itemsMap.entries()) {
+                            if (item[meta.itemKey] === removeId || id === removeId) {
+                                itemsMap.delete(id);
+                                deleted = true;
+                                logger.info(`[processCollection][${sectionKey}] Successfully removed ${removeId}`);
+                                break;
+                            }
+                        }
+                        if (!deleted) logger.warn(`[processCollection][${sectionKey}] Could not find item to remove: ${removeId}`);
+                    }
+                    return null;
+                }
+
+                const itemsToAdd = Array.isArray(processed) ? processed : [processed];
+
+                itemsToAdd.forEach(itemData => {
+                    const finalId = itemData[meta.itemKey] || itemData.child;
+                    if (!finalId) {
+                        logger.error(`[processCollection][${sectionKey}] Row processed but missing itemKey:`, itemData);
+                        return;
+                    }
+
+                    let targetItem = itemsMap.get(finalId);
+                    if (!targetItem) {
+                        for (const [id, item] of itemsMap.entries()) {
+                            if (item[meta.itemKey] === finalId) {
+                                targetItem = item;
+                                break;
+                            }
+                        }
+
+                        if (!targetItem) {
+                            logger.info(`[processCollection][${sectionKey}] Adding new item to map: ${finalId}`);
+                            targetItem = { [meta.itemKey]: finalId };
+                            itemsMap.set(finalId, targetItem);
+                        }
+                    }
+
+                    logger.info(`[processCollection][${sectionKey}] Merging table data into item: ${finalId}`);
+                    const rowMappings = mergeDataAndExtractMappings(targetItem, itemData, meta.itemKey);
+                    if (rowMappings) {
+                        logger.info(`[processCollection][${sectionKey}] Collected forcing mapping for ${finalId}`);
+                        Object.assign(pendingForcedMappings, rowMappings);
+                    }
+                });
+
+                return null;
+            }
+        });
+
+        if (killResult && killResult.isKilled) return killResult;
+    }
+
+    // 3. Apply general properties (rules) to each item in itemsMap
+    // Local context will be each object in the letter_codes_list
+    for (const item of itemsMap.values()) {
+        const killResult = applyGeneralRulesToItem(inputData, item, rules, meta, sectionKey);
         if (killResult) return killResult;
     }
 
-    // Apply forced mappings
-    if (pendingForcedMappings.length > 0) {
-        logger.info(`[GenericEngine][${sectionKey}] Applying ${pendingForcedMappings.length} forced mappings`);
-        applyForcedMappings(itemsMap, pendingForcedMappings);
+    // 4. Apply Forced Mappings at the end
+    if (Object.keys(pendingForcedMappings).length > 0) {
+        applyForcedMappings(itemsMap, pendingForcedMappings, meta.itemKey);
     }
 
-    // Refine and clean items
-    // Use outputTemplate if available, otherwise fallback to refineItem (legacy)
-    let finalItems;
-    if (meta.outputTemplate) {
-        logger.info(`[GenericEngine][${sectionKey}] Applying output template...`);
-        finalItems = Array.from(itemsMap.values()).map(item => {
-            // Context includes item properties + globalRules + global inputData
-            const context = { ...item, ...globalRules, inputData };
-            return applyTemplate(meta.outputTemplate, context);
-        });
-    } else {
-        finalItems = Array.from(itemsMap.values()).map(item => refineItem(item, meta));
+    const finalResult = {
+        results: Array.from(itemsMap.values())
+    };
+
+    if (tablesToHide.size > 0) {
+        finalResult.hideKeys = Array.from(tablesToHide);
     }
 
-    // Build output structure
-    // If outputStructure is NOT defined but outputTemplate IS, we might just want to return the array?
-    // But readCodes specifically wanted { global_rules, letter_codes, letter_codes_list } in the past.
-    // The NEW plan says: outputTemplate defines the object structure.
-    // AND SectionRegistry.js removed outputStructure.
-    // So for readCodes, we just return the finalItems array?
-    // WAIT. The user prompt said: "Output structure for readcodes: (forget about globalRules) or these kinda things"
-    // " { c_term: ... }"
-    // So distinct from the "nested" structure before.
-    // However, if we return just an array, does it match the key "readCodes"?
-    // Yes, GenericEngine does output[meta.outputPath] = result;
-    // So output.readCodes = [ ...objects... ]
-
-    // BUT! Reviewing the plan: "SectionRegistry.js ... Remove outputStructure".
-    // "GenericEngine.js ... Update processCollection... Resulting items replace the raw items list."
-
-    // So simpler return:
-    return finalItems;
+    return finalResult;
 };
 
 /**
- * Process a TABLE section (Config-Driven)
- * Iterates over a config table and looks up values in inputData.
+ * Helper: Merge processed row data into an item, and extract forced mappings if any
  */
-const processTable = (inputData, rules, meta, sectionKey) => {
-    const tableConfig = rules[meta.configPath];
+const mergeDataAndExtractMappings = (item, data, itemKey) => {
+    const currentId = item[itemKey];
+    let mappings = null;
 
-    if (!tableConfig) {
-        logger.warn(`[GenericEngine][${sectionKey}] Config table '${meta.configPath}' not found`);
-        return [];
-    }
+    Object.entries(data).forEach(([key, val]) => {
+        // Skip system/ID keys
+        if (["id", "child", "child_code", "addCode", itemKey].includes(key)) return;
 
-    const result = processTableRules(inputData, tableConfig, {
-        sectionKey: sectionKey,
-        skipField: "add_metric",
-        onRowProcess: (processedRow, inputData, extra) => {
-            const processor = RowProcessors[meta.rowProcessor];
-            if (processor) {
-                return processor(processedRow, inputData, meta);
-            }
-            return processedRow;
+        // Collect Forced Mappings
+        if (key === "forcedMappings" && val && val !== currentId) {
+            if (!mappings) mappings = {};
+            mappings[currentId] = val;
+            return;
         }
+
+        item[key] = val;
     });
 
-    if (result && result.isKilled) return result;
-
-    return result;
+    return mappings;
 };
 
 /**
- * Process a GLOBAL section
- * Applies rules directly to the root inputData.
+ * Apply forced mappings to remap identifiers in the itemsMap
+ */
+const applyForcedMappings = (itemsMap, mappings, itemKey) => {
+    Object.entries(mappings).forEach(([oldId, newId]) => {
+        if (itemsMap.has(oldId)) {
+            const item = itemsMap.get(oldId);
+            logger.info(`[GenericEngine] Applying Forced Mapping: ${oldId} -> ${newId}`);
+            item[itemKey] = newId;
+            itemsMap.delete(oldId);
+            itemsMap.set(newId, item);
+        }
+    });
+};
+
+/**
+ * Apply general rules directly to root output ✅
  */
 const processGlobal = (inputData, rules, meta, sectionKey) => {
     const result = {};
-
     for (const [key, config] of Object.entries(rules)) {
-        const logCtx = `${sectionKey}[${key}]`;
-        const res = applyRule(inputData, config, logCtx, inputData);
-
+        const res = applyRule(inputData, config, key);
         if (res && res.isKilled) return res;
-
         result[key] = res;
     }
-
     return result;
 };
 
 /**
- * Helper: Extract global rules from section config
+ * Helper: Extract and evaluate general rules for a section ✅
  */
-const extractGlobalRules = (inputData, rules, meta) => {
-    if (!meta.globalRules) return {};
-
-    const globalRules = {};
-    meta.globalRules.forEach(key => {
+const extractGeneralRules = (inputData, rules, metaGeneralRules) => {
+    if (!metaGeneralRules) return {};
+    const generalRules = {};
+    metaGeneralRules.forEach(key => {
         if (rules[key] !== undefined) {
-            globalRules[key] = applyRule(inputData, rules[key], key);
+            generalRules[key] = applyRule(inputData, rules[key], key);
         }
     });
-
-    return globalRules;
+    return generalRules;
 };
 
 /**
- * Helper: Process secondary tables (e.g., specific_read_codes)
+ * Apply rules to a single item in a collection ✅
  */
-const processSecondaryTables = (inputData, secRules, itemsMap, meta, pendingMappings) => {
-    for (const [tableKey, tableConfig] of Object.entries(secRules)) {
-        if (!tableConfig.value || !Array.isArray(tableConfig.value)) continue;
-
-        const tableRows = tableConfig.value;
-
-        for (const row of tableRows) {
-            const itemId = row.child || row.child_code;
-            if (!itemId) continue;
-
-            let item = itemsMap.get(itemId);
-            const isNew = !item;
-
-            if (isNew) {
-                logger.info(`[GenericEngine] Adding new item: ${itemId}`);
-                item = {
-                    [meta.itemKey]: itemId,
-                    read_code_date: null,
-                    comments: null,
-                    code_type: null
-                };
-            }
-
-            // Apply row properties
-            Object.keys(row).forEach(key => {
-                if (["child", "child_code", "addCode", "id"].includes(key)) return;
-
-                if (key === "forcedMappings" && row[key] && row[key] !== itemId) {
-                    pendingMappings.push({ from: itemId, to: row[key] });
-                    return;
-                }
-
-                item[key] = row[key];
-            });
-
-            if (isNew) {
-                itemsMap.set(itemId, item);
-            }
-        }
-    }
-};
-
-/**
- * Helper: Apply rules to a single item
- */
-const applyRulesToItem = (inputData, item, rules, meta, sectionKey) => {
+const applyGeneralRulesToItem = (inputData, item, rules, meta, sectionKey = "") => {
     const itemId = item[meta.itemKey];
-    const contextStr = `[${itemId}]`;
 
     for (const key of Object.keys(rules)) {
-        if (key === "__secondaryRules" || meta.globalRules?.includes(key)) continue;
+        // Skip globalSkipField, generalRules, and tables
+        if (key === meta.globalSkipField) continue;
+        if (meta.generalRules?.includes(key)) continue;
 
         const ruleConfig = rules[key];
-        const isAdvancedRule = typeof ruleConfig === "object" && ruleConfig !== null && ruleConfig.type === "cascading-advanced";
-
-        const logCtx = `${sectionKey}${contextStr}[${key}]`;
-
-        // Create context chain: item -> inputData
-        const context = new ContextChain([item, inputData]);
-        const result = applyRule(inputData, ruleConfig, logCtx, item);
-
-        if (result && result.isKilled) {
-            logger.error(`[GenericEngine] KILL triggered at ${logCtx}`);
-            return result;
+        // Skip table configurations
+        if (ruleConfig && typeof ruleConfig === "object" && Array.isArray(ruleConfig.value) && Array.isArray(ruleConfig.columns)) {
+            continue;
         }
 
-        // Advanced rules override, static rules fill missing
-        if (isAdvancedRule) {
-            item[key] = result;
-        } else if (isEmpty(item[key])) {
-            item[key] = result;
+        const res = applyRule(inputData, ruleConfig, `[${itemId}][${key}]`, item);
+        if (res && res.isKilled) return res;
+
+        const isAdvanced = typeof ruleConfig === "object" && ruleConfig?.type === "cascading-advanced";
+        if (isAdvanced || isEmpty(item[key])) {
+            item[key] = res;
         }
     }
-
     return null;
 };
-
-/**
- * Helper: Apply forced mappings
- */
-const applyForcedMappings = (itemsMap, mappings) => {
-    mappings.forEach(mapping => {
-        const item = itemsMap.get(mapping.from);
-        if (item) {
-            logger.info(`[GenericEngine] Forced mapping: ${mapping.from} -> ${mapping.to}`);
-            item.child = mapping.to;
-            itemsMap.delete(mapping.from);
-            itemsMap.set(mapping.to, item);
-        }
-    });
-};
-
-/**
- * Helper: Refine item (apply field mappings and exclusions)
- * @deprecated Legacy method, use outputTemplate instead.
- */
-const refineItem = (item, meta) => {
-    const refined = { ...item };
-
-    // Apply field mappings
-    if (meta.fieldMappings) {
-        for (const [sourceKey, mapping] of Object.entries(meta.fieldMappings)) {
-            if (refined[sourceKey] !== undefined) {
-                const transformFn = TransformFunctions[mapping.transform];
-                refined[mapping.target] = transformFn ? transformFn(refined[sourceKey]) : refined[sourceKey];
-            }
-        }
-    }
-
-    // Remove excluded fields
-    if (meta.excludeFields) {
-        meta.excludeFields.forEach(key => delete refined[key]);
-    }
-
-    return refined;
-};
-

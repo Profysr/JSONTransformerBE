@@ -1,6 +1,6 @@
 import logger from "../lib/logger.js";
 import { evaluateCascadingAdvanced } from "./ruleEvaluator.js";
-import { resolveVariable } from "../lib/utils.js";
+import { resolveVariable } from "../utils/utils.js";
 
 /** 
  * There are 4 types of rules:

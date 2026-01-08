@@ -1,4 +1,4 @@
-import logger from "./logger.js";
+import logger from "../lib/logger.js";
 
 /**
  * Trims value if it's a string, otherwise returns value as-is
@@ -37,33 +37,34 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
         return varString;
     }
 
-    const keyToLookInInput = varMatch[1].trim();
+    const inputVal = varMatch[1].trim();
 
     /**
-     * if the fieldKey is the same as the keyToLookInInput then there's no need of mapping. It's same as we're mapping the letter_date value to letter_date field in input JSON
+     * if the fieldKey is the same as the inputVal then there's no need of mapping. It's same as we're mapping the letter_date value to letter_date field in input JSON
      */
-    if (keyToLookInInput === fieldKey) {
+    if (inputVal === fieldKey) {
         return varString;
     }
 
     // Tries to resolve a nested property path ("inputData.letter_type")
-    let keyValueToMap = keyToLookInInput
+    let fieldVal = inputVal
         .split(".")
         .reduce((acc, part) => (acc ? acc[part] : undefined), localContext);
 
-    if (keyValueToMap === undefined) {
-        keyValueToMap = keyToLookInInput
+    if (fieldVal === undefined) {
+        fieldVal = inputVal
             .split(".")
             .reduce((acc, part) => (acc ? acc[part] : undefined), inputData);
     }
 
-    if (keyValueToMap === undefined) {
-        logger.warn(`[${fieldKey}] Field '${keyToLookInInput}' is not found in input inputData`);
+    if (fieldVal === undefined) {
+        logger.warn(`[${fieldKey}] Field '${inputVal}' is not found in input inputData`);
+        return false;
     } else {
-        logger.info(`[${fieldKey}] Found variable '${keyToLookInInput}' -> "${keyValueToMap}"`);
+        logger.info(`[${fieldKey}] Found variable '${inputVal}' -> "${fieldVal}"`);
     }
 
-    return keyValueToMap;
+    return fieldVal;
 };
 
 /**
