@@ -109,18 +109,14 @@ export const processTransformation = catchAsyncHandler(
       /** if kill property found, then storing it with output */
       if (output && output.isKilled === true) {
         logger.warn("Transformation terminated. ", {
-          field: output.field,
-          value: output.value,
-          sectionKey: output.sectionKey,
+          output
         });
 
-        return res.status(403).json({
+        return res.status(201).json({
           success: false,
           message: `Transformation terminated by rule applied to ${output.field} for value ${output.value}. The resulting value is retained.`,
-          killInfo: {
-            field: output.field,
-            value: output.value,
-            sectionKey: output.sectionKey,
+          kill_status: {
+            ...output
           },
         });
       }
@@ -144,7 +140,7 @@ export const processTransformation = catchAsyncHandler(
       );
     } finally {
       // Invoke logger.sendLogs after processing is complete
-      // await logger.sendLogs(apiEndpoint, letter_type, nhs_id, letter_id);
+      await logger.sendLogs(apiEndpoint, letter_type, nhs_id, letter_id);
     }
   }
 );

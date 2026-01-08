@@ -48,7 +48,12 @@ export const processGeneric = (inputData, configRules) => {
                 // COLLECTION handling
                 if (result.results.isKilled) {
                     logger.error(`[GenericEngine] Section '${sectionKey}' triggered KILL`);
-                    return result.results;
+                    return {
+                        field: result.results.fieldKey,
+                        value: result.results.value,
+                        isKilled: true,
+                        sectionKey
+                    };
                 }
 
                 const actualResult = result.results;
@@ -78,7 +83,12 @@ export const processGeneric = (inputData, configRules) => {
                 // GLOBAL handling
                 if (result.isKilled) {
                     logger.error(`[GenericEngine] Global Section '${sectionKey}' triggered KILL`);
-                    return result;
+                    return {
+                        field: result.fieldKey,
+                        value: result.value,
+                        isKilled: true,
+                        sectionKey
+                    };
                 }
 
                 if (meta.outputPath === null) {
@@ -172,6 +182,7 @@ const processCollection = (inputData, rules, meta, sectionKey) => {
                     return null;
                 }
 
+                /** removing if skipField = true */
                 if (processed._remove) {
                     const removeId = processed.identifier || itemId;
                     logger.info(`[processCollection][${sectionKey}] Removal signal for: ${removeId}`);

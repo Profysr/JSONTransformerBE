@@ -21,7 +21,7 @@ export const applyRule = (inputData, fieldValue, fieldKey, localContext = {}) =>
 
         if (result.isKilled) {
             logger.warn(`[${fieldKey}] Rule resulted in KILL. Value: ${result.value}`);
-            return { value: result.value, isKilled: true };
+            return result;
         }
 
         fieldValue = result.value;

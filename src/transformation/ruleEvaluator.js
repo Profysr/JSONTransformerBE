@@ -69,6 +69,7 @@ export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, local
                 }, isKilled: ${isKilled}`
             );
             return {
+                fieldKey, 
                 value: clause.outcome?.value,
                 isKilled,
             };

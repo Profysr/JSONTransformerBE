@@ -15,14 +15,13 @@ export const transformerHelper = (inputData, configRules) => {
     try {
         // The Generic Engine handles all sections based on metadata
         const output = processGeneric(transformed, configRules);
-
         // Check for KILL
         if (output && output.isKilled) {
             logger.error(
                 `[${output.field}] Transformation killed at field: ${output.field}, killValue: ${output.value}`
             );
             logger.info("Data transformation killed. Final state:", output.data);
-            return { ...output, sectionKey };
+            return output;
         }
 
         // Merge output into transformed data
