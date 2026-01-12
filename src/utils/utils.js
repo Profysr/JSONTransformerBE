@@ -43,7 +43,8 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
      * if the fieldKey is the same as the inputVal then there's no need of mapping. It's same as we're mapping the letter_date value to letter_date field in input JSON
      */
     if (inputVal === fieldKey) {
-        return varString;
+        logger.warn(`[${fieldKey}] Identity assignment found. Skipping transformation`);
+        return inputData[fieldKey];
     }
 
     // Tries to resolve a nested property path ("inputData.letter_type")

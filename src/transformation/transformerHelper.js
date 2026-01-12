@@ -1,5 +1,21 @@
 import logger from "../lib/logger.js";
-import { processGeneric } from "./GenericEngine.js";
+import { processMetrics } from "./handlers/metricsHandler.js";
+import { processReadCodes } from "./handlers/readCodesHandler.js";
+import { processGeneralRules } from "./generalProcessor.js";
+
+/**
+ * Helper function to check if transformation should be killed ✅
+ */
+export const checkForKill = (result, sectionKey) => {
+    if (result && result.isKilled) {
+        logger.error(
+            `[${result.field}] Transformation killed at field: ${result.field}, killValue: ${result.value}`
+        );
+        logger.info("Data transformation killed. Final state:", result.data);
+        return { ...result, sectionKey };
+    }
+    return null;
+};
 
 /**
  * Transforms the input data based on the defined rules in configuration. ✅
@@ -12,28 +28,39 @@ export const transformerHelper = (inputData, configRules) => {
         `Configuration has ${Object.keys(configRules).length} sections`
     );
 
-    try {
-        // The Generic Engine handles all sections based on metadata
-        const output = processGeneric(transformed, configRules);
-        // Check for KILL
-        if (output && output.isKilled) {
-            logger.error(
-                `[${output.field}] Transformation killed at field: ${output.field}, killValue: ${output.value}`
-            );
-            logger.info("Data transformation killed. Final state:", output.data);
-            return output;
+    for (const [sectionKey, sectionRules] of Object.entries(configRules)) {
+        logger.info(`[Section: ${sectionKey}] Started processing...`);
+
+        if (!sectionRules || typeof sectionRules !== "object") {
+            logger.error(`[Section: ${sectionKey}] Invalid section rules object`);
+            return inputData;
         }
 
-        // Merge output into transformed data
-        transformed = { ...transformed, ...output };
+        try {
+            let result;
 
-    } catch (error) {
-        /** Stop the execution */
-        logger.error(`Transformation Error:`, {
-            error: error.message,
-            stack: error.stack,
-        });
-        throw new Error(`Transformation Error: ${error.message}`);
+            // Dispatch to explicit handlers
+            if (sectionKey === "metrics") {
+                result = processMetrics(transformed, sectionRules);
+            } else if (sectionKey === "readCodes") {
+                result = processReadCodes(transformed, sectionRules);
+            } else {
+                // Default behavior for other sections
+                result = processGeneralRules(transformed, sectionRules);
+            }
+
+            const killCheck = checkForKill(result, sectionKey);
+            if (killCheck) return killCheck;
+
+            transformed = result;
+        } catch (error) {
+            /** Stop the execution */
+            logger.error(`[Section: ${sectionKey}] Error processing section:`, {
+                error: error.message,
+                stack: error.stack,
+            });
+            throw new Error(`[Section: ${sectionKey}] Error processing section: ${error.message}`);
+        }
     }
 
     const totalDuration = Date.now() - startTime;

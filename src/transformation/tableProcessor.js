@@ -5,7 +5,9 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
     const {
         sectionKey = "Unknown",
         skipField = "skip",
-        onRowProcess = (row) => row
+        identifierKey = null,
+        onRowProcess = (row) => row,
+        onRowSkip = null
     } = options;
 
     const rows = tableConfig?.value || [];
@@ -16,6 +18,14 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
     logger.info(`[${sectionKey}][Table] Processing ${rows.length} rules.`);
 
     const results = [];
+
+    /**
+     * Helper to get row identification for logging
+     */
+    const getRowId = (row, index) => {
+        if (identifierKey && row[identifierKey]) return row[identifierKey];
+        return `Row ${index}`;
+    };
 
     /**
      * Evaluate field value only if canConditional is true
@@ -30,7 +40,8 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
             }
 
             if (result !== val) {
-                logger.info(`[${sectionKey}][Table][${fieldKey}] Rule change: "${val}" -> "${result}"`);
+                const rowId = getRowId(localRow, rows.indexOf(localRow));
+                logger.info(`[${sectionKey}][Table][${rowId}][${fieldKey}] Rule change: "${val}" -> "${result}"`);
             }
             return result;
         }
@@ -39,6 +50,8 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
 
     for (let index = 0; index < rows.length; index++) {
         const row = rows[index];
+        const rowId = getRowId(row, index);
+
         // 1. Evaluate "Should Skip" logic
         const shouldAddValue = evaluateField(skipField, row[skipField], row);
 
@@ -46,12 +59,13 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
          * Checking if automation needs to be killed or row should be skipped
          */
         if (shouldAddValue !== null && typeof shouldAddValue === "object" && shouldAddValue.isKilled === true) {
-            logger.error(`[${sectionKey}][Table][Row ${index}] Skip field triggered KILL.`);
+            logger.error(`[${sectionKey}][Table][${rowId}] Skip field triggered KILL.`);
             return { ...shouldAddValue, sectionKey, rowIdx: index };
         }
 
         if (row.hasOwnProperty(skipField) && (shouldAddValue === false || shouldAddValue === "false")) {
-            logger.info(`[${sectionKey}][Table][Row ${index}] Row skipped.`);
+            logger.info(`[${sectionKey}][Table][${rowId}] Row skipped.`);
+            if (onRowSkip) onRowSkip(row, inputData, { index });
             continue;
         }
 
@@ -74,7 +88,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         }
 
         if (rowKilled) {
-            logger.error(`[${sectionKey}][Table][Row ${index}] Field triggered KILL.`);
+            logger.error(`[${sectionKey}][Table][${rowId}] Field triggered KILL.`);
             return { ...killResult, sectionKey, rowIdx: index };
         }
 
