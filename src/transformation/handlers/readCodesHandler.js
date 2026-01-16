@@ -26,20 +26,25 @@ const buildCodeObj = (base, overrides) => {
     const input = { ...base, ...overrides };
 
     return {
-        c_term: input.c_term || input.child,
-        addStartDate: (input.add_date === true || input.add_date === "true") ? "true" : "false",
-        startDate: input.date_type || null,
-        child: input.child,
-        code_type: input.code_type,
-        comments: input.comments || "",
-        attach_problems: input.attach_problems,
-        create_problems: input.create_problems,
-        promoteProblem: input.promote_problem,
-        putSummary: input.put_summary,
-        problem_severity: (input.isMajor === true || input.isMajor === "true") ? "Major" : "Minor",
-        use_inactive: input.use_inactive,
-        override_bilateral: input.override_bilateral,
-        search_codes_in_problems: input.search_codes_in_problems
+      c_term: input.c_term || input.child,
+      addStartDate:
+        input.add_date === true || input.add_date === "true" ? "true" : "false",
+      startDate: input.date_type || null,
+      addEndDate:
+        input.add_endDate_problem === true ||
+        input.add_endDate_problem === "true"
+          ? "true"
+          : "false",
+      endDate: input.endDate_duration || null,
+      child: input.child,
+      code_type: input.code_type || null,
+      comments: input.comments || "",
+      attach_problems: input.attach_problems || "No",
+      create_problems: input.create_problems || "No",
+      promoteProblem: input.promote_problem || "No",
+      putSummary: input.put_summary || "No",
+      problem_severity:
+        input.isMajor === true || input.isMajor === "true" ? "Major" : "Minor",
     };
 };
 

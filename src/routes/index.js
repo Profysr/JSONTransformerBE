@@ -24,7 +24,7 @@ router.post("/transform/:inst_id", processTransformation);
 router.get(
   "/derive_json",
   catchAsyncHandler(async (req, res, next) => {
-    const inputPath = path.join(process.cwd(), "input.json");
+    const inputPath = path.join(process.cwd(), "rules.json");
 
     if (!fs.existsSync(inputPath)) {
       return next(new ErrorHandler(404, "input.json not found"));
