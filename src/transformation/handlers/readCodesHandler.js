@@ -1,7 +1,8 @@
 import logger from "../../lib/logger.js";
-import { applyRule } from "../ruleApplier.js";
+import { applyRule } from "../ApplyRule.js";
 import { processTableRules } from "../tableProcessor.js";
-import { isEmpty } from "../../utils/utils.js";
+import { isEmpty } from "../../utils/util.js";
+import { resolveValue } from "../../lib/evaluateConditions.js";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -26,25 +27,25 @@ const buildCodeObj = (base, overrides) => {
     const input = { ...base, ...overrides };
 
     return {
-      c_term: input.c_term || input.child,
-      addStartDate:
-        input.add_date === true || input.add_date === "true" ? "true" : "false",
-      startDate: input.date_type || null,
-      addEndDate:
-        input.add_endDate_problem === true ||
-        input.add_endDate_problem === "true"
-          ? "true"
-          : "false",
-      endDate: input.endDate_duration || null,
-      child: input.child,
-      code_type: input.code_type || null,
-      comments: input.comments || "",
-      attach_problems: input.attach_problems || "No",
-      create_problems: input.create_problems || "No",
-      promoteProblem: input.promote_problem || "No",
-      putSummary: input.put_summary || "No",
-      problem_severity:
-        input.isMajor === true || input.isMajor === "true" ? "Major" : "Minor",
+        c_term: input.c_term || input.child,
+        addStartDate:
+            input.add_date === true || input.add_date === "true" ? "true" : "false",
+        startDate: input.date_type || null,
+        addEndDate:
+            input.add_endDate_problem === true ||
+                input.add_endDate_problem === "true"
+                ? "true"
+                : "false",
+        endDate: input.endDate_duration || null,
+        child: input.child,
+        code_type: input.code_type || null,
+        comments: input.comments || "",
+        attach_problems: input.attach_problems || "No",
+        create_problems: input.create_problems || "No",
+        promoteProblem: input.promote_problem || "No",
+        putSummary: input.put_summary || "No",
+        problem_severity:
+            input.isMajor === true || input.isMajor === "true" ? "Major" : "Minor",
     };
 };
 
@@ -100,18 +101,33 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys) => {
         if (result !== null && typeof result === "object" && result.isKilled === true) {
             logger.error(`[${contextualFieldKey}] Rule triggered KILL`);
             return {
+                ...result,
                 isKilled: true,
                 field: key,
-                value: result.value,
                 inputData: inputData,
             };
         }
 
+        // Extract value if result is result object
+        let finalValue = result;
+        if (result && typeof result === "object" && result.hasOwnProperty("value") && result.hasOwnProperty("isKilled")) {
+            finalValue = result.value;
+
+            // Handle Matrix Assignments
+            if (result.matrixAssignments && typeof result.matrixAssignments === "object") {
+                for (const [mKey, mVal] of Object.entries(result.matrixAssignments)) {
+                    const resolvedMVal = resolveValue(mVal, inputData, codeObj, `matrix:${childCode}`);
+                    codeObj[mKey] = resolvedMVal;
+                    logger.info(`[${childCode}] Matrix assignment: ${mKey} = ${resolvedMVal}`);
+                }
+            }
+        }
+
         // Advanced rules override, static rules fill missing values
         if (isAdvancedRule) {
-            codeObj[key] = result;
+            codeObj[key] = finalValue;
         } else if (isEmpty(codeObj[key])) {
-            codeObj[key] = result;
+            codeObj[key] = finalValue;
         }
     }
 
@@ -122,7 +138,7 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys) => {
 // MAIN HANDLER
 // ============================================
 
-export const processReadCodes = (inputData, rules) => {
+export const processReadCodes = (inputData, rules, context) => {
     logger.info(`[ReadCodes] Starting transformation...`);
 
     const globalRuleKeys = ["use_inactive", "override_bilateral", "search_codes_in_problems"];
@@ -132,12 +148,12 @@ export const processReadCodes = (inputData, rules) => {
 
     if (useExistingReadCodes !== null && typeof useExistingReadCodes === "object" && useExistingReadCodes.isKilled === true) {
         logger.error(`[ReadCodes] add_readcodes toggle triggered KILL`);
-        return {
+        context.setKilled({
+            ...useExistingReadCodes,
             isKilled: true,
             field: "add_readcodes",
-            value: useExistingReadCodes.value,
-            inputData: inputData,
-        };
+        });
+        return;
     }
 
     const shouldIncludeExisting = !(useExistingReadCodes == "false" || useExistingReadCodes == false);
@@ -208,7 +224,8 @@ export const processReadCodes = (inputData, rules) => {
         // Check for KILL from table processing
         if (tableResults && !Array.isArray(tableResults) && tableResults.isKilled) {
             logger.error(`[ReadCodes][specific_codes] Table processing triggered KILL`);
-            return tableResults;
+            context.setKilled(tableResults);
+            return;
         }
     }
 
@@ -217,8 +234,12 @@ export const processReadCodes = (inputData, rules) => {
     const entries = Array.from(codesMap.entries());
 
     for (const [childCode, codeObj] of entries) {
-        const killResult = applyRulesToCode(inputData, codeObj, rules, globalRuleKeys);
-        if (killResult) return killResult;
+        const result = applyRulesToCode(inputData, codeObj, rules, globalRuleKeys);
+
+        if (result && result.isKilled) {
+            context.setKilled(result);
+            return;
+        }
     }
 
     // Step 5: Apply forced mappings
@@ -236,13 +257,15 @@ export const processReadCodes = (inputData, rules) => {
 
     // Add global rules onto the root level of inputData
     globalRuleKeys.forEach(key => {
-        inputData[key] = globalRules[key];
+        if (globalRules[key] !== undefined) {
+            context.addCandidate(key, globalRules[key], "section:readCodes (global)");
+        }
     });
 
     // Step 8: Update inputData with transformed codes
-    inputData.letter_codes_list = finalCodes;
-    inputData.letter_codes = finalCodes.map(c => c.child).join(", ");
+    // Add to context candidates
+    context.addCandidate("letter_codes_list", finalCodes, "section:readCodes");
+    context.addCandidate("letter_codes", finalCodes.map(c => c.child).join(", "), "section:readCodes");
 
     logger.info(`[ReadCodes] Completed. Total codes: ${finalCodes.length}`);
-    return inputData;
 };

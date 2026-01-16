@@ -90,6 +90,7 @@ class BatchLogger {
   }
   error(message, meta) {
     this.log("error", message, meta);
+    throw new Error(message);
   }
   debug(message, meta) {
     this.log("debug", message, meta);

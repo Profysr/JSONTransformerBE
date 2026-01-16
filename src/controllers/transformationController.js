@@ -25,7 +25,7 @@ export const fetchConfigRules = async (inst_id, letter_type) => {
       {
         maxAttempts: 3,
         retryDelay: 3000,
-        logPrefix: `Fetching Config Rules for ${inst_id} and ${letter_type}` 
+        logPrefix: `Fetching Config Rules for ${inst_id} and ${letter_type}`
       }
     );
 
@@ -112,10 +112,10 @@ export const processTransformation = catchAsyncHandler(
           output
         });
 
-        return res.status(201).json({
+        return res.status(200).json({
           success: false,
           message: `Transformation terminated by rule applied to ${output.field} for value ${output.value}. The resulting value is retained.`,
-          kill_status: {
+          KillResponse: {
             ...output
           },
         });

@@ -2,71 +2,60 @@ import logger from "../lib/logger.js";
 import { processMetrics } from "./handlers/metricsHandler.js";
 import { processReadCodes } from "./handlers/readCodesHandler.js";
 import { processGeneralRules } from "./generalProcessor.js";
+import { TransformationContext } from "./TransformationContext.js";
 
-/**
- * Helper function to check if transformation should be killed ✅
- */
-export const checkForKill = (result, sectionKey) => {
-    if (result && result.isKilled) {
-        logger.error(
-            `[${result.field}] Transformation killed at field: ${result.field}, killValue: ${result.value}`
-        );
-        logger.info("Data transformation killed. Final state:", result.data);
-        return { ...result, sectionKey };
-    }
-    return null;
-};
-
-/**
- * Transforms the input data based on the defined rules in configuration. ✅
- */
 export const transformerHelper = (inputData, configRules) => {
     const startTime = Date.now();
-    let transformed = { ...inputData };
     logger.info("Started JSON Transformation");
-    logger.info(
-        `Configuration has ${Object.keys(configRules).length} sections`
-    );
+    logger.info(`Configuration has ${Object.keys(configRules).length} sections`);
+
+    // 1. Initialize Context with immutable input
+    const context = new TransformationContext(inputData);
 
     for (const [sectionKey, sectionRules] of Object.entries(configRules)) {
+        if (context.killResult) break; // Check global kill
+
         logger.info(`[Section: ${sectionKey}] Started processing...`);
 
         if (!sectionRules || typeof sectionRules !== "object") {
             logger.error(`[Section: ${sectionKey}] Invalid section rules object`);
-            return inputData;
         }
 
         try {
-            let result;
-
-            // Dispatch to explicit handlers
+            // Dispatch to explicit handlers with CONTEXT
             if (sectionKey === "metrics") {
-                result = processMetrics(transformed, sectionRules);
+                processMetrics(inputData, sectionRules, context);
             } else if (sectionKey === "readCodes") {
-                result = processReadCodes(transformed, sectionRules);
+                processReadCodes(inputData, sectionRules, context);
             } else {
                 // Default behavior for other sections
-                result = processGeneralRules(transformed, sectionRules);
+                processGeneralRules(inputData, sectionRules, context);
             }
 
-            const killCheck = checkForKill(result, sectionKey);
-            if (killCheck) return killCheck;
+            if (context.killResult) {
+                logger.warn(`Transformation aborted by kill signal.`);
+                break;
+            }
 
-            transformed = result;
         } catch (error) {
             /** Stop the execution */
             logger.error(`[Section: ${sectionKey}] Error processing section:`, {
                 error: error.message,
                 stack: error.stack,
             });
-            throw new Error(`[Section: ${sectionKey}] Error processing section: ${error.message}`);
         }
     }
 
+    // 2. Resolve Final Output
+    const finalOutput = context.getFinalOutput();
+
     const totalDuration = Date.now() - startTime;
-    logger.info(
-        `Data transformation completed successfully in ${totalDuration}ms`
-    );
-    logger.info("Final transformed data:", transformed);
-    return transformed;
+    logger.info(`Data transformation completed successfully in ${totalDuration}ms`);
+
+    // Log final result only if not killed (or simplified)
+    if (!context.killResult) {
+        logger.info("Final transformed data keys:", Object.keys(finalOutput));
+    }
+
+    return finalOutput;
 };

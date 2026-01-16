@@ -9,7 +9,7 @@ export const trimString = (val) => (typeof val === "string" ? val.trim() : val);
  * Check if a value is empty (null, undefined, or empty string)
  */
 export const isEmpty = (val) => {
-    if (val === undefined || val === null) return true;
+    if (val === undefined || val === null || val === "") return true;
     const trimmed = trimString(val);
     if (typeof trimmed === "string") return trimmed.length === 0;
     return false;

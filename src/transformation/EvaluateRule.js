@@ -1,5 +1,6 @@
 import logger from "../lib/logger.js";
 import { evaluateCondition } from "../lib/evaluateConditions.js";
+import { isEmpty } from "../utils/util.js";
 
 /** This is the first child that takes the rules, logicType and pass it to the next function for evaluation */
 export const evaluateRuleList = (inputData, rules, logicType, fieldKey, localContext = {}) => {
@@ -63,14 +64,14 @@ export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, local
 
         /** if condition satisfied, return thenValue */
         if (result) {
-            const isKilled = clause.outcome?.isKilled === true;
+            const outcome = clause.outcome || {};
+            const isKilled = outcome.isKilled === true;
             logger.info(
-                `[${fieldKey}] Condition satisfied at Clause ${index + 1}. Value: ${clause.outcome?.value
-                }, isKilled: ${isKilled}`
+                `[${fieldKey}] Condition satisfied at Clause ${index + 1}. isKilled: ${isKilled}`
             );
             return {
-                fieldKey, 
-                value: clause.outcome?.value,
+                ...outcome, // Return full object (value, notes, batch_name, etc.)
+                fieldKey,
                 isKilled,
             };
         } else {
@@ -81,14 +82,16 @@ export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, local
     }
 
     /** if there's no condition match, simply extract the elseVal from fieldValue and return it */
-    const isKilled = fieldValue.else?.isKilled === true;
-    const elseValue = fieldValue.else?.value !== undefined ? fieldValue.else.value : "";
+    const elseBlock = fieldValue.else || {};
+    const isKilled = elseBlock.isKilled === true;
+    const elseValue = !isEmpty(elseBlock.value) ? elseBlock.value : "";
 
     logger.info(
         `[${fieldKey}] No condition satisfied, using elseValue: ${elseValue}, isKilled: ${isKilled}`
     );
 
     return {
+        ...elseBlock,
         value: elseValue,
         isKilled: isKilled,
     };

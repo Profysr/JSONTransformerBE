@@ -48,7 +48,7 @@ const createMetricObj = (name, val, code, row, addDate, metricDate) => {
 // MAIN HANDLER
 // ============================================
 
-export const processMetrics = (inputData, rules) => {
+export const processMetrics = (inputData, rules, context) => {
     logger.info(`[Metrics] Starting transformation...`);
 
     const metricsTable = rules.metrics_list || {};
@@ -93,12 +93,13 @@ export const processMetrics = (inputData, rules) => {
 
     // Check for KILL scenario
     if (results && results.isKilled) {
-        return results;
+        context.setKilled(results);
+        return;
     }
 
-    // Update inputData with transformed metrics
-    inputData.metrics = results;
-    logger.info(`[Metrics] Completed. Total items: ${results.length}`);
-
-    return inputData;
+    // Add to Context Candidates
+    if (results && results.length > 0) {
+        context.addCandidate("metrics", results, "section:metrics");
+        logger.info(`[Metrics] Added ${results.length} metrics to candidates.`);
+    }
 };

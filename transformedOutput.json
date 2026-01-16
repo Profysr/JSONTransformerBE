@@ -1,0 +1,151 @@
+{
+   "success":true,
+   "message":"Data successfully transformed according to client-specific rules.",
+   "output":{
+      "nhs_id":"6505671730",
+      "letter_id":"2a89fe92cca542508fa5ae2dc2e84913",
+      "letter_codes":"9N19., 567.., XaPCc, XaIwQ",
+      "letter_codes_list":[
+         {
+            "c_term":"Seen in accident and emergency department",
+            "addStartDate":"true",
+            "startDate":null,
+            "addEndDate":"false",
+            "endDate":null,
+            "child":"9N19.",
+            "code_type":null,
+            "comments":"",
+            "attach_problems":"true",
+            "create_problems":{
+               "notes":"",
+               "value":"false",
+               "isKilled":false,
+               "batch_name":""
+            },
+            "promoteProblem":"No",
+            "putSummary":"No",
+            "problem_severity":"Minor"
+         },
+         {
+            "c_term":"Computerised tomography",
+            "addStartDate":"true",
+            "startDate":null,
+            "addEndDate":"false",
+            "endDate":null,
+            "child":"567..",
+            "code_type":null,
+            "comments":"",
+            "attach_problems":"true",
+            "create_problems":{
+               "notes":"",
+               "value":"false",
+               "isKilled":false,
+               "batch_name":""
+            },
+            "promoteProblem":"No",
+            "putSummary":"No",
+            "problem_severity":"Minor"
+         },
+         {
+            "c_term":"Seen by ambulance crew",
+            "addStartDate":"true",
+            "startDate":null,
+            "addEndDate":"false",
+            "endDate":null,
+            "child":"XaPCc",
+            "code_type":null,
+            "comments":"",
+            "attach_problems":"true",
+            "create_problems":{
+               "notes":"",
+               "value":"false",
+               "isKilled":false,
+               "batch_name":""
+            },
+            "promoteProblem":"Promote to problem",
+            "putSummary":"Put in the summary",
+            "problem_severity":"Minor"
+         },
+         {
+            "c_term":"Ophthalmology Code",
+            "addStartDate":"true",
+            "startDate":null,
+            "addEndDate":"false",
+            "endDate":null,
+            "child":"XaIwQ",
+            "code_type":null,
+            "comments":"",
+            "attach_problems":"true",
+            "create_problems":{
+               "notes":"",
+               "value":"false",
+               "isKilled":false,
+               "batch_name":""
+            },
+            "promoteProblem":"Promote to problem",
+            "putSummary":"Put in the inactive summary",
+            "problem_severity":"Major"
+         }
+      ],
+      "rpa_note":"Admitted, Metrics found",
+      "file_name":"23-6505671730-06 Nov 2025",
+      "file_sha256":"d27ad9cbf1945378c640670c6aceeabbdea587338c9462b6eda98d3779d19ade",
+      "imgs_sha256":[
+         "1c0039ec060a5fc91b91e0a76b4aa9b921b8690a3c073d49be3bdcc587237de5",
+         "2837d0b787d99968b8fd5255f5d8210789a026852c5510ebbef9e9b9b850415d",
+         "05ce3040e29bf82a3831383d34c5045717036360f0693f66e841cb5bba62a2da",
+         "c9254dab108decad0f792c947c00ff62b9e52da684556f054d2faf41b8ffd64a",
+         "5fd9583f22b24aa3fde36328e1edd782ea3b9befb5cc82280d44f68a5d305ed4",
+         "bc78f84618dbaac368b80e7f01da6c124d12ed740e4a6f7561da25186a0b4774",
+         "eb8210a6a74ba6a5573f79d58a53693cb7710e231ffb699020c66a268bb9a737",
+         "d5b15d6a2a558c8fe31fbc35c68ad5c152797d38e6511ab4eef850d152f258d6",
+         "606d6cb0c56f2ff649e69bf0b481189152a4575789686d3936ff7700142648e0",
+         "5b4277824122c81adf2507e63d1dfbb0ee9cd3c77751bf196f7c82ac84283302",
+         "b4bf1a949e1d173ad3904c2d1e0fc27d01b31c98ac7fb7ff387c8cd23f820f4c"
+      ],
+      "approval_date":"06/11/2025 16:17:33",
+      "approved_by":"halima.n@kynoby.com",
+      "letter_type":"Out of Hours",
+      "letter_date":"06-11-2025",
+      "metrics":[
+         {
+            "c_term":"bp_systolic",
+            "value":"120",
+            "addDate":"false",
+            "read_code_date":null,
+            "child":"2469"
+         },
+         {
+            "c_term":"bp_diastolic",
+            "value":"80",
+            "addDate":"false",
+            "read_code_date":null,
+            "child":"246A."
+         }
+      ],
+      "hospital_name":"NHS 111",
+      "department":null,
+      "incident_date":"04-11-2025",
+      "diagnosis":"[{'Condition': 'Peritonitis due to abscess', 'Code': None, 'Status': 'New', 'Reason': 'Diagnosed with peritonitis due to abscess, possibly acute appendicitis.'}]",
+      "treatment_procedure":"[{'Treatment': 'Computed Tomography', 'Code': '567..', 'Reason': 'CT abdomen and pelvis ordered to investigate abdominal pain.'}]",
+      "admitted":"True",
+      "patient_age":70,
+      "deducted":true,
+      "deceased":"",
+      "multiple_nhsIds":false,
+      "missing_nhsIds":false,
+      "action_required":"",
+      "safeguarding":"",
+      "fall":null,
+      "notes":"var(notes)",
+      "choose_flag":"false",
+      "add_readcodes":"false",
+      "forwardLetter":"false",
+      "forwarding_type":"Group",
+      "forwarding_to":"Kynoby Coding",
+      "send_task":"false",
+      "send_task_type":"",
+      "send_task_to":"",
+      "flag_color":""
+   }
+}

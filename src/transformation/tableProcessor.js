@@ -1,5 +1,5 @@
 import logger from "../lib/logger.js";
-import { applyRule } from "./ruleApplier.js";
+import { applyRule } from "./ApplyRule.js";
 
 export const processTableRules = (inputData, tableConfig, options = {}) => {
     const {

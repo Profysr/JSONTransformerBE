@@ -1,6 +1,6 @@
 import logger from "../lib/logger.js";
-import { evaluateCascadingAdvanced } from "./ruleEvaluator.js";
-import { resolveVariable } from "../utils/utils.js";
+import { evaluateCascadingAdvanced } from "./EvaluateRule.js";
+import { resolveVariable } from "../utils/util.js";
 
 /** 
  * There are 4 types of rules:
@@ -23,8 +23,7 @@ export const applyRule = (inputData, fieldValue, fieldKey, localContext = {}) =>
             logger.warn(`[${fieldKey}] Rule resulted in KILL. Value: ${result.value}`);
             return result;
         }
-
-        fieldValue = result.value;
+        return result;
     }
 
     // 2. Check if the fieldValue is a variable

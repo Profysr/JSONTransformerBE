@@ -1,4 +1,4 @@
-import { isEmpty, trimString } from "../utils/utils.js";
+import { isEmpty, trimString } from "../utils/util.js";
 import logger from "./logger.js";
 
 /**
