@@ -19,31 +19,20 @@ export const transformerHelper = (inputData, configRules) => {
         logger.info(`[Section: ${sectionKey}] Started processing...`);
 
         if (!sectionRules || typeof sectionRules !== "object") {
-            logger.error(`[Section: ${sectionKey}] Invalid section rules object`);
+            throw new Error(`[Section: ${sectionKey}] Configuration is invalid or missing.`);
         }
 
-        try {
-            // Dispatch to explicit handlers with CONTEXT
-            if (sectionKey === "metrics") {
-                processMetrics(inputData, sectionRules, context);
-            } else if (sectionKey === "readCodes") {
-                processReadCodes(inputData, sectionRules, context);
-            } else {
-                // Default behavior for other sections
-                processGeneralRules(inputData, sectionRules, context);
-            }
+        if (sectionKey === "metrics") {
+            processMetrics(inputData, sectionRules, context);
+        } else if (sectionKey === "readCodes") {
+            processReadCodes(inputData, sectionRules, context);
+        } else {
+            processGeneralRules(inputData, sectionRules, context);
+        }
 
-            if (context.killResult) {
-                logger.warn(`Transformation aborted by kill signal.`);
-                break;
-            }
-
-        } catch (error) {
-            /** Stop the execution */
-            logger.error(`[Section: ${sectionKey}] Error processing section:`, {
-                error: error.message,
-                stack: error.stack,
-            });
+        if (context.killResult) {
+            logger.warn(`Transformation aborted by kill signal.`);
+            break;
         }
     }
 

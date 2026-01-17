@@ -1,8 +1,9 @@
-import logger from "../../lib/logger.js";
-import { applyRule } from "../ApplyRule.js";
-import { processTableRules } from "../tableProcessor.js";
-import { isEmpty } from "../../utils/util.js";
 import { resolveValue } from "../../lib/evaluateConditions.js";
+import logger from "../../lib/logger.js";
+import { isEmpty } from "../../utils/util.js";
+import { applyRule } from "../Evaluators/ApplyRule.js";
+import { processTableRules } from "../Evaluators/tableProcessor.js";
+
 
 // ============================================
 // HELPER FUNCTIONS
@@ -40,12 +41,12 @@ const buildCodeObj = (base, overrides) => {
         child: input.child,
         code_type: input.code_type || null,
         comments: input.comments || "",
-        attach_problems: input.attach_problems || "No",
-        create_problems: input.create_problems || "No",
-        promoteProblem: input.promote_problem || "No",
-        putSummary: input.put_summary || "No",
+        attach_problems: input.attach_problems || "false",
+        create_problems: input.create_problems || "false",
+        promoteProblem: input.promote_problem || "false",
+        putSummary: input.put_summary || "false",
         problem_severity:
-            input.isMajor === true || input.isMajor === "true" ? "Major" : "Minor",
+            input.isMajor == true ? "Major" : "Minor",
     };
 };
 
@@ -99,7 +100,7 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys) => {
 
         // Handle KILL scenario
         if (result !== null && typeof result === "object" && result.isKilled === true) {
-            logger.error(`[${contextualFieldKey}] Rule triggered KILL`);
+            logger.warn(`[${contextualFieldKey}] Rule triggered KILL`);
             return {
                 ...result,
                 isKilled: true,
@@ -153,7 +154,7 @@ export const processReadCodes = (inputData, rules, context) => {
     }
 
     if (useExistingReadCodes !== null && typeof useExistingReadCodes === "object" && useExistingReadCodes.isKilled === true) {
-        logger.error(`[ReadCodes] add_readcodes toggle triggered KILL`);
+        logger.warn(`[ReadCodes] add_readcodes toggle triggered KILL`);
         context.setKilled({
             ...useExistingReadCodes,
             isKilled: true,
@@ -164,15 +165,11 @@ export const processReadCodes = (inputData, rules, context) => {
 
     const shouldIncludeExisting = !(useExistingReadCodes == "false" || useExistingReadCodes == false);
 
-    if (!shouldIncludeExisting) {
-        logger.info(`[ReadCodes] Skipping entire read codes processing due to toggle.`);
-        context.addCandidate("add_readcodes", "false", "section:readCodes");
-        context.addCandidate("letter_codes_list", "", "section:readCodes (skip)");
-        context.addCandidate("letter_codes", "", "section:readCodes (skip)");
-        return;
+    if (shouldIncludeExisting) {
+        logger.info(`[ReadCodes] add_readcodes is true, keeping existing codes, present in letter codes list`);
+    } else {
+        logger.info(`[ReadCodes] add_readcodes is false, skipping existing codes from input.`);
     }
-
-    logger.info(`[ReadCodes] add_readcodes is true, keeping existing codes, present in letter codes list`);
 
     // Step 2: Initialize codes map from letter_codes_list (Empty if toggle was false)
     const existingList = shouldIncludeExisting ? (inputData.output?.letter_codes_list || inputData.letter_codes_list || []) : [];
@@ -239,7 +236,7 @@ export const processReadCodes = (inputData, rules, context) => {
 
         // Check for KILL from table processing
         if (tableResults && !Array.isArray(tableResults) && tableResults.isKilled) {
-            logger.error(`[ReadCodes][specific_codes] Table processing triggered KILL`);
+            logger.warn(`[ReadCodes][specific_codes] Table processing triggered KILL`);
             context.setKilled(tableResults);
             return;
         }
@@ -282,6 +279,7 @@ export const processReadCodes = (inputData, rules, context) => {
     // Add to context candidates
     context.addCandidate("letter_codes_list", finalCodes, "section:readCodes");
     context.addCandidate("letter_codes", finalCodes.map(c => c.child).join(", "), "section:readCodes");
+    context.addCandidate("add_readcodes", shouldIncludeExisting ? "true" : "false", "section:readCodes");
 
     logger.info(`[ReadCodes] Completed. Total codes: ${finalCodes.length}`);
 };

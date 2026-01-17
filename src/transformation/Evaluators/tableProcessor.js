@@ -1,4 +1,4 @@
-import logger from "../lib/logger.js";
+import logger from "../../lib/logger.js";
 import { applyRule } from "./ApplyRule.js";
 
 export const processTableRules = (inputData, tableConfig, options = {}) => {
@@ -75,7 +75,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
          * Checking if automation needs to be killed or row should be skipped
          */
         if (shouldAddValue !== null && typeof shouldAddValue === "object" && shouldAddValue.isKilled === true) {
-            logger.error(`[${sectionKey}][Table][${rowId}] Skip field triggered KILL.`);
+            logger.warn(`[${sectionKey}][Table][${rowId}] Skip field triggered KILL.`);
             return { ...shouldAddValue, sectionKey, rowIdx: index };
         }
 
@@ -104,7 +104,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         }
 
         if (rowKilled) {
-            logger.error(`[${sectionKey}][Table][${rowId}] Field triggered KILL.`);
+            logger.warn(`[${sectionKey}][Table][${rowId}] Field triggered KILL.`);
             return { ...killResult, sectionKey, rowIdx: index };
         }
 

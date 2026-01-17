@@ -1,6 +1,6 @@
 import logger from "../../lib/logger.js";
-import { applyRule } from "../ApplyRule.js";
-import { processTableRules } from "../tableProcessor.js";
+import { applyRule } from "../Evaluators/ApplyRule.js";
+import { processTableRules } from "../Evaluators/tableProcessor.js";
 
 // ============================================
 // HELPER FUNCTIONS

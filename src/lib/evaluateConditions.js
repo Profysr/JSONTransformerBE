@@ -55,11 +55,11 @@ export function evaluateCondition(inputData, condition, ruleKey, localContext = 
     const prep = (v) => (caseSensitive ? String(v ?? "") : String(v ?? "").toLowerCase());
     const result = !!handler(fieldVal, inputVal, prep);
 
-    logger.info(`[${ruleKey}] ${field}(${fieldVal}) ${operator} ${value}(${inputVal}) => ${result}`);
+    logger.info(`[${ruleKey}] ${field}[${fieldVal}] ${operator} [${inputVal}] => ${result}`);
     return result;
 
   } catch (error) {
     logger.error(`[${ruleKey}] Condition Error: ${error.message}`);
-    return false;
+    throw error; // Re-throw to fail the whole transformation (Strict Mode)
   }
 }

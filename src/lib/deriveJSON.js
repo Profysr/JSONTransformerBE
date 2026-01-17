@@ -32,8 +32,7 @@ const cleanValue = (val, fieldId = "unknown") => {
  */
 const processTableValue = (rows, columns, fieldId) => {
   if (!Array.isArray(rows) || !Array.isArray(columns)) {
-    logger.error(`[Table: ${fieldId}] Validation failed: rows or columns are not arrays.`);
-    return [];
+    throw new Error(`[Table: ${fieldId}] Validation failed: 'rows' or 'columns' must be arrays.`);
   }
 
   const refinedRows = rows.map((row, index) => {
@@ -69,8 +68,7 @@ export const deriveJSONRules = (config) => {
   logger.info("Starting JSON derivation from configuration...");
 
   if (!config || !Array.isArray(config) || config.length === 0) {
-    logger.error("Configuration is missing or not an array.");
-    return output;
+    throw new Error("Configuration data is missing or is not a valid array.");
   }
 
   config.forEach((section) => {
@@ -81,8 +79,7 @@ export const deriveJSONRules = (config) => {
     let hasData = false;
 
     if (!section.fields || !Array.isArray(section.fields)) {
-      logger.error(`Section  has no valid fields array.`);
-      return;
+      throw new Error(`Section '${sectionName}' has no valid fields array.`);
     }
 
     section.fields.forEach((field) => {

@@ -1,13 +1,12 @@
-import logger from "../lib/logger.js";
-import { evaluateCondition } from "../lib/evaluateConditions.js";
-import { isEmpty } from "../utils/util.js";
+import logger from "../../lib/logger.js";
+import { evaluateCondition } from "../../lib/evaluateConditions.js";
+import { isEmpty } from "../../utils/util.js";
 
 /** This is the first child that takes the rules, logicType and pass it to the next function for evaluation */
 export const evaluateRuleList = (inputData, rules, logicType, fieldKey, localContext = {}) => {
     // Validate rules array
     if (!rules || !Array.isArray(rules) || rules.length === 0) {
-        logger.error(`[${fieldKey}] Invalid or empty rules array`);
-        return false;
+        throw new Error(`[${fieldKey}] Invalid or empty rules array in configuration.`);
     }
 
     const result =
@@ -27,8 +26,7 @@ export const evaluateRuleRecursive = (inputData, rule, fieldKey, localContext = 
         logger.info(`[${fieldKey}] Evaluating Group (Logic: ${rule.logicType})`);
 
         if (!rule.rules || !Array.isArray(rule.rules)) {
-            logger.error(`[${fieldKey}] Group rule missing 'rules' array`);
-            return false;
+            throw new Error(`[${fieldKey}] Group rule missing 'rules' array in configuration.`);
         }
 
         return evaluateRuleList(inputData, rule.rules, rule.logicType, fieldKey, localContext);
@@ -44,9 +42,8 @@ export const evaluateRuleRecursive = (inputData, rule, fieldKey, localContext = 
  */
 export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, localContext = {}) => {
     for (const [index, clause] of fieldValue.clauses.entries()) {
-        if (!clause || typeof clause !== "object") {
-            logger.warn(`[${fieldKey}] Clause ${index + 1} is invalid, skipping`);
-            continue;
+        if (!clause || typeof clause !== "object" || !Array.isArray(clause.rules)) {
+            throw new Error(`[${fieldKey}] Clause ${index + 1} is invalid or missing rules array.`);
         }
 
         logger.info(

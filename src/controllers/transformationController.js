@@ -76,7 +76,6 @@ export const processTransformation = catchAsyncHandler(
         typeof inputData !== "object" ||
         Object.keys(inputData).length === 0
       ) {
-        logger.error("Input Validation failed", JSON.stringify(inputData));
         return next(
           new ErrorHandler(
             400,
@@ -135,11 +134,10 @@ export const processTransformation = catchAsyncHandler(
       return next(
         new ErrorHandler(
           500,
-          "An internal error prevented the data transformation."
+          `Transformation failed: ${error.message || "An internal error prevented the data transformation."}`
         )
       );
     } finally {
-      // Invoke logger.sendLogs after processing is complete
       await logger.sendLogs(apiEndpoint, letter_type, nhs_id, letter_id);
     }
   }
