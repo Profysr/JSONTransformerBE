@@ -79,7 +79,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
             return { ...shouldAddValue, sectionKey, rowIdx: index };
         }
 
-        if (row.hasOwnProperty(skipField) && (shouldAddValue === false || shouldAddValue === "false")) {
+        if (row.hasOwnProperty(skipField) && (shouldAddValue == false)) {
             logger.info(`[${sectionKey}][Table][${rowId}] Row skipped.`);
             if (onRowSkip) onRowSkip(row, inputData, { index });
             continue;

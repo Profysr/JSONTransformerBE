@@ -1,4 +1,4 @@
-import logger from "../../lib/logger.js";
+import { isEmpty } from "../../utils/util.js";
 import { applyRule } from "../Evaluators/ApplyRule.js";
 
 // There will be 2 kinda values -- object or a string.  if object, then there will be possibility of kill
@@ -23,22 +23,10 @@ export const processGeneralRules = (inputData, rules, context) => {
                 context.addNote(derivedValue.notes);
             }
 
-            // 3. Extract Value (Multiple Assignment Support)
-            // If it has a 'value' property, use that.
-            if (derivedValue.value !== undefined) {
+            // 3. If it has a 'value' property, use that.
+            if (!isEmpty(derivedValue.value)) {
                 const actualVal = derivedValue.value;
-
-                if (typeof actualVal === "object" && actualVal !== null) {
-                    // Multiple Assignments: { "flag": "true", "color": "red" }
-                    // Iterate and add candidate for EACH property
-                    for (const [k, v] of Object.entries(actualVal)) {
-                        context.addCandidate(k, v, `rule:${fieldKey}`);
-                        logger.info(`[${fieldKey}] Multiple assignment: ${k} = ${v}`);
-                    }
-                } else {
-                    // Single Assignment
-                    context.addCandidate(fieldKey, actualVal, `section:general`);
-                }
+                context.addCandidate(fieldKey, actualVal, `section:general`);
             }
 
             // 4. Handle Matrix Assignments

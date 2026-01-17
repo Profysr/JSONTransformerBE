@@ -4,11 +4,11 @@ import { evaluateCascadingAdvanced } from "./EvaluateRule.js";
 
 /** 
  * There are 4 types of rules:
- * 1. Static assignment - For example: search for a property and it isn't present, then just add it such as if I set batch_name = "Practice to Review"
- * 2. Static assignment with variable - For example: search for a property and it is present in our input, then map it. such as if I set hospital_name = NHS 111.
+ * 1. Static assignment
+ * 2. Static assignment with variable
  * 3. Variable mapping
  * 4. Advanced logic
-*/
+ */
 export const applyRule = (inputData, fieldValue, fieldKey, localContext = {}) => {
 
     // 1. Check if the fieldValue is configured through advanced logic

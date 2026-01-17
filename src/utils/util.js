@@ -78,7 +78,7 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
  * Recursively resolves variables in strings, arrays, and objects.
  */
 export const resolveDeep = (value, inputData, localContext = {}, fieldKey = "") => {
-    if (value === null || value === undefined) return value;
+    if (isEmpty(value)) return value;
 
     if (typeof value === "string") {
         return resolveVariable(value, inputData, localContext, fieldKey);
@@ -113,22 +113,22 @@ export const toBoolean = (value) => {
 /**
  * Recursively removes keys with undefined, null, or empty string values.
  */
-export const cleanDeep = (obj) => {
-    if (obj === null || typeof obj !== 'object') {
-        return obj;
-    }
+// export const cleanDeep = (obj) => {
+//     if (obj === null || typeof obj !== 'object') {
+//         return obj;
+//     }
 
-    if (Array.isArray(obj)) {
-        return obj
-            .map(v => cleanDeep(v))
-            .filter(v => v !== undefined && v !== "");
-    }
+//     if (Array.isArray(obj)) {
+//         return obj
+//             .map(v => cleanDeep(v))
+//             .filter(v => v !== undefined && v !== "");
+//     }
 
-    return Object.entries(obj).reduce((acc, [key, value]) => {
-        const cleanedValue = cleanDeep(value);
-        if (cleanedValue !== undefined && cleanedValue !== "") {
-            acc[key] = cleanedValue;
-        }
-        return acc;
-    }, {});
-};
+//     return Object.entries(obj).reduce((acc, [key, value]) => {
+//         const cleanedValue = cleanDeep(value);
+//         if (cleanedValue !== undefined && cleanedValue !== "") {
+//             acc[key] = cleanedValue;
+//         }
+//         return acc;
+//     }, {});
+// };

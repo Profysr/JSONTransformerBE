@@ -1,48 +1,66 @@
 import logger from "../../lib/logger.js";
+import { isEmpty } from "../../utils/util.js";
 import { applyRule } from "../Evaluators/ApplyRule.js";
 import { processTableRules } from "../Evaluators/tableProcessor.js";
+import { applyTemplate } from "../Evaluators/TemplateEngine.js";
 
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
 
-// Extract numeric values from metric strings (e.g., "120 mg" -> "120")
-const extractNumeric = (val) => {
-    if (typeof val !== "string") return val;
-    const match = val.match(/-?\d+(\.\d+)?/g);
-    return match ? match.join("/") : "";
-};
-
 // Split Blood Pressure into systolic and diastolic items
-const splitBP = (metricName, rawValue, codes, row, addDate, metricDate) => {
+const splitBP = (metricName, rawValue, codes, row, rules) => {
     logger.info(`[Metrics][${metricName}] Splitting BP into systolic/diastolic...`);
 
     const values = String(rawValue).split("/");
     const codesList = String(codes || "").split("/");
 
+    const systolicContext = {
+        ...row,
+        metricName: "bp_systolic",
+        rawValue: values[0] || "",
+        metric_codes: codesList[0] || ""
+    };
+
+    const diastolicContext = {
+        ...row,
+        metricName: "bp_diastolic",
+        rawValue: values[1] || "",
+        metric_codes: codesList[1] || codesList[0] || ""
+    };
+
     return [
-        createMetricObj("bp_systolic", values[0], codesList[0], row, addDate, metricDate),
-        createMetricObj("bp_diastolic", values[1], codesList[1] || codesList[0], row, addDate, metricDate)
+        createMetricObj(systolicContext, rules),
+        createMetricObj(diastolicContext, rules)
     ];
 };
 
 // Build metric object with explicit field mapping
-const createMetricObj = (name, val, code, row, addDate, metricDate) => {
-    const obj = {
-        c_term: name,
-        value: extractNumeric(val) || "",
-        addDate: addDate ? "true" : "false",
-        read_code_date: metricDate || null,
-        child: code,
+const createMetricObj = (rowContext, rules) => {
+    // Standard Metrics Template
+    const defaultTemplate = {
+        cTerm: { field: "metricName" },
+        value: {
+            field: "rawValue",
+            transform: "extractNumeric"
+        },
+        addDate: {
+            field: "add_date",
+            transform: ["toBoolean", "toString"]
+        },
+        metricDate: { field: "date_type", condition: { field: "add_date", operator: "equals", value: "true" } },
+        child: { field: "metric_codes" },
+        // Pass through any additional fields from row
+        // ...Object.keys(rowContext).reduce((acc, key) => {
+        //     if (!["metricName", "rawValue", "metric_codes", "add_date", "date_type", "metric", "add_metric", "id", "value"].includes(key)) {
+        //         acc[key] = { field: key };
+        //     }
+        //     return acc;
+        // }, {})
     };
 
-    // Pass through any additional fields from row (excluding internal fields)
-    Object.keys(row).forEach(key => {
-        if (["metric", "add_metric", "add_date", "date_type", "metric_codes", "id", "value"].includes(key)) return;
-        obj[key] = row[key];
-    });
-
-    return obj;
+    const result = applyTemplate(defaultTemplate, rowContext);
+    return result;
 };
 
 // ============================================
@@ -50,7 +68,6 @@ const createMetricObj = (name, val, code, row, addDate, metricDate) => {
 // ============================================
 
 export const processMetrics = (inputData, rules, context) => {
-    logger.info(`[Metrics] Starting transformation...`);
 
     // Step 1: Evaluate add_metrics toggle
     let useMetrics = context.getCandidate("add_metrics");
@@ -61,7 +78,7 @@ export const processMetrics = (inputData, rules, context) => {
         logger.info(`[Metrics] Using context override for add_metrics: ${useMetrics}`);
     }
 
-    if (useMetrics !== null && typeof useMetrics === "object" && useMetrics.isKilled === true) {
+    if (!isEmpty(useMetrics) && typeof useMetrics === "object" && useMetrics.isKilled === true) {
         logger.warn(`[Metrics] add_metrics toggle triggered KILL`);
         context.setKilled({
             ...useMetrics,
@@ -71,9 +88,9 @@ export const processMetrics = (inputData, rules, context) => {
         return;
     }
 
-    if (useMetrics === "false" || useMetrics === false) {
+    if (useMetrics == false) {
         logger.info(`[Metrics] Skipping metrics section due to toggle (add_metrics = ${useMetrics})`);
-        context.addCandidate("metrics", "", "section:metrics (skip)");
+        context.addCandidate("metrics", [], "section:metrics (skip)");
         return;
     }
 
@@ -102,7 +119,7 @@ export const processMetrics = (inputData, rules, context) => {
 
     const preparedTable = { ...metricsTable, value: preparedRows };
 
-    // Process metrics_list table with explicit row processing
+    // Step 3: Process metrics_list table with explicit row processing
     const results = processTableRules(inputData, preparedTable, {
         sectionKey: "Metrics",
         skipField: "add_metric",
@@ -123,19 +140,27 @@ export const processMetrics = (inputData, rules, context) => {
             }
 
             const rawValue = inputMetrics[metricKey];
-            const addDate = row.add_date === true || row.add_date === "true";
-            const metricDate = addDate ? row.date_type : null;
+
+            // Prepare context for Template Engine
+            const rowContext = {
+                ...row,
+                metricName,
+                rawValue,
+                metric_codes: row.metric_codes,
+                add_date: row.add_date,
+                date_type: row.date_type
+            };
 
             // Check if this is a Blood Pressure metric
             const isBP = ["blood_pressure", "bp"].includes(metricName.toLowerCase());
 
             if (isBP) {
                 // Return array of two items (systolic + diastolic)
-                return splitBP(metricName, rawValue, row.metric_codes, row, addDate, metricDate);
+                return splitBP(metricName, rawValue, row.metric_codes, row, rules);
             } else {
                 // Return single metric item
                 logger.info(`[Metrics][${metricName}] Processing with value: ${rawValue}`);
-                return createMetricObj(metricName, rawValue, row.metric_codes, row, addDate, metricDate);
+                return createMetricObj(rowContext, rules);
             }
         }
     });

@@ -81,7 +81,7 @@ export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, local
     /** if there's no condition match, simply extract the elseVal from fieldValue and return it */
     const elseBlock = fieldValue.else || {};
     const isKilled = elseBlock.isKilled === true;
-    const elseValue = !isEmpty(elseBlock.value) ? elseBlock.value : "";
+    const elseValue = !isEmpty(elseBlock.value) ? elseBlock.value : "skip";
 
     logger.info(
         `[${fieldKey}] No condition satisfied, using elseValue: ${elseValue}, isKilled: ${isKilled}`

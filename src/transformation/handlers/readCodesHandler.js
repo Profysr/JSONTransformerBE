@@ -1,6 +1,7 @@
 import { resolveValue } from "../../lib/evaluateConditions.js";
 import logger from "../../lib/logger.js";
 import { isEmpty } from "../../utils/util.js";
+import { applyTemplate } from "../Evaluators/TemplateEngine.js";
 import { applyRule } from "../Evaluators/ApplyRule.js";
 import { processTableRules } from "../Evaluators/tableProcessor.js";
 
@@ -23,31 +24,66 @@ const initializeCodesMap = (existingList) => {
     return codesMap;
 };
 
-// Build code object with explicit field mapping
-const buildCodeObj = (base, overrides) => {
-    const input = { ...base, ...overrides };
+// Build code object with explicit field mapping using Template Engine
+const buildCodeObj = (codeContext, rules) => {
+    // Standard ReadCodes Template
+    const defaultTemplate = {
+        /** General Fields */
+        cTerm: { field: "c_term" },
+        child: { field: "child" },
+        codeType: { field: "code_type" },
+        comments: { field: "comments" },
 
-    return {
-        c_term: input.c_term || input.child,
-        addStartDate:
-            input.add_date === true || input.add_date === "true" ? "true" : "false",
-        startDate: input.date_type || null,
-        addEndDate:
-            input.add_endDate_problem === true ||
-                input.add_endDate_problem === "true"
-                ? "true"
-                : "false",
-        endDate: input.endDate_duration || null,
-        child: input.child,
-        code_type: input.code_type || null,
-        comments: input.comments || "",
-        attach_problems: input.attach_problems || "false",
-        create_problems: input.create_problems || "false",
-        promoteProblem: input.promote_problem || "false",
-        putSummary: input.put_summary || "false",
-        problem_severity:
-            input.isMajor == true ? "Major" : "Minor",
+        /** Date Fields */
+        addStartDate: {
+            field: "add_date",
+            transform: ["toBoolean", "toString"]
+        },
+        startDate: { field: "date_type", condition: { field: "add_date", operator: "contains", value: "true" } },
+        addEndDate: {
+            field: "add_endDate",
+            transform: ["toBoolean", "toString"]
+        },
+        endDate: {
+            field: "endDate_duration",
+            transform: "addMonths",
+            condition: { field: "add_endDate", operator: "contains", value: "true" }
+        },
+
+        // Conditional fields
+        attachProblem: {
+            field: "attach_problems",
+            condition: {
+                logic: "OR",
+                rules: [
+                    { field: "code_type", operator: "contains", value: "diagnosis" },
+                    { field: "search_codes_in_problems", operator: "equals", value: true }
+                ]
+            }
+        },
+        createProblem: {
+            field: "create_problems",
+            condition: { field: "code_type", operator: "contains", value: "diagnosis" }
+        },
+
+        promoteProblem: { field: "promote_problem" },
+        putSummary: { field: "put_summary" },
+        problemSeverity: {
+            field: "problem_severity",
+            transform: "mapSeverity",
+            condition: {
+                logic: "OR",
+                rules: [
+                    { field: "create_problems", operator: "equals", value: true },
+                    { field: "promote_problem", operator: "is_not_empty" },
+                    { field: "put_summary", operator: "is_not_empty" }
+                ]
+            }
+        },
     };
+
+    const result = applyTemplate(defaultTemplate, codeContext);
+    return result;
 };
 
 // Apply forced mappings to remap code identifiers
@@ -261,16 +297,14 @@ export const processReadCodes = (inputData, rules, context) => {
         applyForcedMappings(codesMap, pendingForcedMappings);
     }
 
-    // Step 6: Build final output using buildCodeObj for consistent structure
-    logger.info(`[ReadCodes] Building final output...`);
-    const finalCodes = Array.from(codesMap.values()).map(code => buildCodeObj(code, {}));
-
-    // Step 7: Extract global rules
+    // Step 6: Extract global rules and build final output
     const globalRules = extractGlobalRules(inputData, rules);
+    logger.info(`[ReadCodes] Building final output...`);
+    const finalCodes = Array.from(codesMap.values()).map(code => buildCodeObj({ ...code, ...globalRules }, rules));
 
     // Add global rules onto the root level of inputData
     globalRuleKeys.forEach(key => {
-        if (globalRules[key] !== undefined) {
+        if (!isEmpty(globalRules[key])) {
             context.addCandidate(key, globalRules[key], "section:readCodes (global)");
         }
     });

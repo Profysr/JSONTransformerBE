@@ -8,10 +8,10 @@ import logger from "./logger.js";
 const cleanValue = (val, fieldId = "unknown") => {
   if (typeof val === "string") {
     const trimmed = val.trim();
-    if (trimmed === "skip" || trimmed === "<skip>") {
-      logger.info(`[CleanValue][${fieldId}] Converted '${val}' to null`);
-      return null;
-    }
+    // if (trimmed === "skip" || trimmed === "<skip>") {
+    //   logger.info(`[CleanValue][${fieldId}] Converted '${val}' to null`);
+    //   return null;
+    // }
     return trimmed;
   }
   if (Array.isArray(val)) {
@@ -125,7 +125,7 @@ export const deriveJSONRules = (config) => {
     if (hasData && section.sectionKey) {
       output[trimString(section.sectionKey)] = sectionData;
     } else {
-      logger.info(` No data found or sectionKey missing.`);
+      logger.info(`No data found or sectionKey missing.`);
     }
   });
 

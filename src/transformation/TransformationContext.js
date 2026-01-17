@@ -1,6 +1,6 @@
 
 import logger from "../lib/logger.js";
-import { resolveDeep, cleanDeep } from "../utils/util.js";
+import { resolveDeep } from "../utils/util.js";
 
 export class TransformationContext {
     constructor(inputData) {

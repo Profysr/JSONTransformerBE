@@ -176,7 +176,7 @@
           ],
           "outcome": {
             "notes": "",
-            "value": null,
+            "value": "skip",
             "isKilled": false,
             "batch_name": "",
             "matrixAssignments": {
@@ -198,7 +198,7 @@
           ],
           "outcome": {
             "notes": "",
-            "value": null,
+            "value": "skip",
             "isKilled": true,
             "batch_name": "GP Action Required",
             "matrixAssignments": {
@@ -242,7 +242,7 @@
           ],
           "outcome": {
             "notes": "Safeguarding concerns detected",
-            "value": null,
+            "value": "skip",
             "isKilled": false,
             "batch_name": "",
             "matrixAssignments": {
@@ -286,7 +286,7 @@
           ],
           "outcome": {
             "notes": "",
-            "value": null,
+            "value": "skip",
             "isKilled": true,
             "batch_name": "Deceased Patient",
             "matrixAssignments": {
@@ -332,14 +332,13 @@
           ],
           "outcome": {
             "notes": "Over 70 Patient Fall",
-            "value": null,
+            "value": "skip",
             "isKilled": false,
             "batch_name": "",
             "matrixAssignments": {
               "flag_color": "Green",
               "choose_flag": "true",
               "add_readcodes": "false",
-              "add_metrics": "false",
               "forwardLetter": "true",
               "forwarding_to": "Kynoby Coding",
               "forwarding_type": "Group"
@@ -391,7 +390,7 @@
         }
       ]
     },
-    "isMajor": "false",
+    "problem_severity": "Minor",
     "specific_codes": {
       "columns": [
         {
@@ -419,7 +418,7 @@
           "canConditional": true
         },
         {
-          "key": "isMajor",
+          "key": "problem_severity",
           "canConditional": true
         },
         {
@@ -433,7 +432,7 @@
           "child": "XaKqd",
           "c_term": "Letter Received",
           "addCode": false,
-          "isMajor": false,
+          "problem_severity": "Minor",
           "add_date": false,
           "code_type": "",
           "put_summary": "",
@@ -445,7 +444,7 @@
           "child": "XaPCc",
           "c_term": "Seen by ambulance crew",
           "addCode": true,
-          "isMajor": false,
+          "problem_severity": "Minor",
           "add_date": true,
           "code_type": "",
           "put_summary": "Put in the summary",
@@ -457,7 +456,7 @@
           "child": "XaIwQ",
           "c_term": "Ophthalmology Code",
           "addCode": true,
-          "isMajor": true,
+          "problem_severity": "Major",
           "add_date": true,
           "code_type": "",
           "put_summary": "Put in the inactive summary",
