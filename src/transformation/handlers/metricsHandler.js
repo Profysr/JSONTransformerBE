@@ -1,4 +1,5 @@
 import logger from "../../lib/logger.js";
+import { applyRule } from "../ApplyRule.js";
 import { processTableRules } from "../tableProcessor.js";
 
 // ============================================
@@ -51,10 +52,27 @@ const createMetricObj = (name, val, code, row, addDate, metricDate) => {
 export const processMetrics = (inputData, rules, context) => {
     logger.info(`[Metrics] Starting transformation...`);
 
-    // Step 0: Check for global override in context (e.g. from matrix assignments)
-    const shouldAddMetrics = context.getCandidate("add_metrics");
-    if (shouldAddMetrics === "false" || shouldAddMetrics === false) {
-        logger.info(`[Metrics] Skipping metrics section due to context override (add_metrics = ${shouldAddMetrics})`);
+    // Step 1: Evaluate add_metrics toggle
+    let useMetrics = context.getCandidate("add_metrics");
+
+    if (useMetrics === undefined) {
+        useMetrics = applyRule(inputData, rules.add_metrics, "add_metrics");
+    } else {
+        logger.info(`[Metrics] Using context override for add_metrics: ${useMetrics}`);
+    }
+
+    if (useMetrics !== null && typeof useMetrics === "object" && useMetrics.isKilled === true) {
+        logger.warn(`[Metrics] add_metrics toggle triggered KILL`);
+        context.setKilled({
+            ...useMetrics,
+            isKilled: true,
+            field: "add_metrics",
+        });
+        return;
+    }
+
+    if (useMetrics === "false" || useMetrics === false) {
+        logger.info(`[Metrics] Skipping metrics section due to toggle (add_metrics = ${useMetrics})`);
         context.addCandidate("metrics", "", "section:metrics (skip)");
         return;
     }
@@ -62,8 +80,30 @@ export const processMetrics = (inputData, rules, context) => {
     const metricsTable = rules.metrics_list || {};
     const inputMetrics = (inputData.output?.metrics) || (inputData.metrics) || {};
 
+    // Step 2: Pre-process rows for Blood Pressure to expose variables to advanced logic
+    const preparedRows = (metricsTable.value || []).map(row => {
+        const metricName = row.metric;
+        if (metricName && ["blood_pressure", "bp"].includes(metricName.toLowerCase())) {
+            const metricKey = Object.keys(inputMetrics).find(
+                (k) => k.toLowerCase() === metricName.toLowerCase()
+            );
+            if (metricKey) {
+                const rawValue = inputMetrics[metricKey];
+                const values = String(rawValue).split("/").map(v => v.trim());
+                return {
+                    ...row,
+                    bp_systolic: values[0] || "",
+                    bp_diastolic: values[1] || ""
+                };
+            }
+        }
+        return row;
+    });
+
+    const preparedTable = { ...metricsTable, value: preparedRows };
+
     // Process metrics_list table with explicit row processing
-    const results = processTableRules(inputData, metricsTable, {
+    const results = processTableRules(inputData, preparedTable, {
         sectionKey: "Metrics",
         skipField: "add_metric",
         identifierKey: "metric",

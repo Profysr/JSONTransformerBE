@@ -83,7 +83,6 @@ export class TransformationContext {
         }
 
         const output = {};
-        console.log("Candidate Entries: ", this.candidates.entries());
 
         for (const [key, candidates] of this.candidates.entries()) {
             if (candidates.length > 0) {

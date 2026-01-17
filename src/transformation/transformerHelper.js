@@ -1,7 +1,7 @@
 import logger from "../lib/logger.js";
 import { processMetrics } from "./handlers/metricsHandler.js";
 import { processReadCodes } from "./handlers/readCodesHandler.js";
-import { processGeneralRules } from "./generalProcessor.js";
+import { processGeneralRules } from "./handlers/generalProcessor.js";
 import { TransformationContext } from "./TransformationContext.js";
 import { cleanDeep } from "../utils/util.js";
 

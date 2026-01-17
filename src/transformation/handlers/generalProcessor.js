@@ -1,6 +1,6 @@
-import logger from "../lib/logger.js";
-import { applyRule } from "./ApplyRule.js";
-import { resolveValue } from "../lib/evaluateConditions.js";
+import logger from "../../lib/logger.js";
+import { applyRule } from "../ApplyRule.js";
+import { resolveValue } from "../../lib/evaluateConditions.js";
 
 // There will be 2 kinda values -- object or a string.  if object, then there will be possibility of kill
 export const processGeneralRules = (inputData, rules, context) => {
