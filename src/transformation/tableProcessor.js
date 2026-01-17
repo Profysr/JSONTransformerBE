@@ -6,6 +6,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         sectionKey = "Unknown",
         skipField = "skip",
         identifierKey = null,
+        context = null, // Added context to options
         onRowProcess = (row) => row,
         onRowSkip = null
     } = options;
@@ -34,16 +35,31 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         const meta = metaMap.get(fieldKey) || {};
         if (meta.canConditional) {
             const result = applyRule(inputData, val, fieldKey, localRow);
+
             // Handle kill scenario immediately if it's a rule result
             if (result !== null && typeof result === "object" && result.isKilled === true) {
                 return result;
             }
 
-            if (result !== val) {
-                const rowId = getRowId(localRow, rows.indexOf(localRow));
-                logger.info(`[${sectionKey}][Table][${rowId}][${fieldKey}] Rule change: "${val}" -> "${result}"`);
+            let finalValue = result;
+
+            // Handle result objects (Cascading Advanced)
+            if (result !== null && typeof result === "object" && result.hasOwnProperty("value")) {
+                finalValue = result.value;
+
+                // Apply Matrix Assignments to context if available
+                if (context && result.matrixAssignments) {
+                    for (const [mKey, mVal] of Object.entries(result.matrixAssignments)) {
+                        context.addCandidate(mKey, mVal, `matrix:${sectionKey}:${fieldKey}`);
+                    }
+                }
             }
-            return result;
+
+            if (finalValue !== val) {
+                const rowId = getRowId(localRow, rows.indexOf(localRow));
+                logger.info(`[${sectionKey}][Table][${rowId}][${fieldKey}] Rule change: "${val}" -> "${finalValue}"`);
+            }
+            return finalValue;
         }
         return val;
     };

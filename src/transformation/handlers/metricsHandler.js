@@ -51,14 +51,23 @@ const createMetricObj = (name, val, code, row, addDate, metricDate) => {
 export const processMetrics = (inputData, rules, context) => {
     logger.info(`[Metrics] Starting transformation...`);
 
+    // Step 0: Check for global override in context (e.g. from matrix assignments)
+    const shouldAddMetrics = context.getCandidate("add_metrics");
+    if (shouldAddMetrics === "false" || shouldAddMetrics === false) {
+        logger.info(`[Metrics] Skipping metrics section due to context override (add_metrics = ${shouldAddMetrics})`);
+        context.addCandidate("metrics", "", "section:metrics (skip)");
+        return;
+    }
+
     const metricsTable = rules.metrics_list || {};
-    const inputMetrics = inputData.metrics || {};
+    const inputMetrics = (inputData.output?.metrics) || (inputData.metrics) || {};
 
     // Process metrics_list table with explicit row processing
     const results = processTableRules(inputData, metricsTable, {
         sectionKey: "Metrics",
         skipField: "add_metric",
         identifierKey: "metric",
+        context, // Pass the context
         onRowProcess: (row, inputData, { index }) => {
             const metricName = row.metric;
             if (!metricName) return null;

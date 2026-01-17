@@ -42,6 +42,18 @@ export class TransformationContext {
     }
 
     /**
+     * Get the current "winning" candidate for a key.
+     * Strategy: First Match Wins.
+     */
+    getCandidate(key) {
+        const candidates = this.candidates.get(key);
+        if (candidates && candidates.length > 0) {
+            return candidates[0].value;
+        }
+        return undefined;
+    }
+
+    /**
      * Add a global note
      */
     addNote(note) {
@@ -88,7 +100,7 @@ export class TransformationContext {
         // Append Notes if any
         if (this.notes.length > 0) {
             output["RecipientNotes"] = this.notes.join(" ||| ");
-        }        
+        }
         return output
     }
 }

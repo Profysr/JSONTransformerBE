@@ -143,8 +143,14 @@ export const processReadCodes = (inputData, rules, context) => {
 
     const globalRuleKeys = ["use_inactive", "override_bilateral", "search_codes_in_problems"];
 
-    // Step 1: Evaluate add_readcodes toggle
-    const useExistingReadCodes = applyRule(inputData, rules.add_readcodes, "add_readcodes");
+    // Step 1: Evaluate add_readcodes toggle (Check context first for overrides like matrix assignments)
+    let useExistingReadCodes = context.getCandidate("add_readcodes");
+
+    if (useExistingReadCodes === undefined) {
+        useExistingReadCodes = applyRule(inputData, rules.add_readcodes, "add_readcodes");
+    } else {
+        logger.info(`[ReadCodes] Using context override for add_readcodes: ${useExistingReadCodes}`);
+    }
 
     if (useExistingReadCodes !== null && typeof useExistingReadCodes === "object" && useExistingReadCodes.isKilled === true) {
         logger.error(`[ReadCodes] add_readcodes toggle triggered KILL`);
@@ -157,10 +163,19 @@ export const processReadCodes = (inputData, rules, context) => {
     }
 
     const shouldIncludeExisting = !(useExistingReadCodes == "false" || useExistingReadCodes == false);
-    logger.info(`[ReadCodes] add_readcodes is ${shouldIncludeExisting}, ${shouldIncludeExisting ? 'keeping' : 'skipping'} existing codes, present in letter codes list`);
+
+    if (!shouldIncludeExisting) {
+        logger.info(`[ReadCodes] Skipping entire read codes processing due to toggle.`);
+        context.addCandidate("add_readcodes", "false", "section:readCodes");
+        context.addCandidate("letter_codes_list", "", "section:readCodes (skip)");
+        context.addCandidate("letter_codes", "", "section:readCodes (skip)");
+        return;
+    }
+
+    logger.info(`[ReadCodes] add_readcodes is true, keeping existing codes, present in letter codes list`);
 
     // Step 2: Initialize codes map from letter_codes_list (Empty if toggle was false)
-    const existingList = shouldIncludeExisting ? (inputData.letter_codes_list || []) : [];
+    const existingList = shouldIncludeExisting ? (inputData.output?.letter_codes_list || inputData.letter_codes_list || []) : [];
     const codesMap = initializeCodesMap(existingList);
     const pendingForcedMappings = [];
 
@@ -173,6 +188,7 @@ export const processReadCodes = (inputData, rules, context) => {
             sectionKey: "ReadCodes:specific_codes",
             skipField: "addCode",
             identifierKey: "child",
+            context, // Pass context
             onRowSkip: (row) => {
                 const childCode = row.child || row.c_term || row.child_code;
                 if (childCode && codesMap.has(childCode)) {

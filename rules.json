@@ -339,6 +339,7 @@
               "flag_color": "Green",
               "choose_flag": "true",
               "add_readcodes": "false",
+              "add_metrics": "false",
               "forwardLetter": "true",
               "forwarding_to": "Kynoby Coding",
               "forwarding_type": "Group"
