@@ -1,5 +1,6 @@
 
 import logger from "../lib/logger.js";
+import { resolveDeep, cleanDeep } from "../utils/util.js";
 
 export class TransformationContext {
     constructor(inputData) {
@@ -28,13 +29,16 @@ export class TransformationContext {
             return;
         }
 
+        // Resolve variables recursively
+        const resolvedValue = resolveDeep(value, this.originalInput, {}, key);
+
         this.candidates.get(key).push({
-            value,
+            value: resolvedValue,
             source,
             timestamp: Date.now()
         });
 
-        logger.info(`[Context] Added candidate for '${key}': ${JSON.stringify(value)} (Source: ${source})`);
+        logger.info(`[Context] Added candidate for '${key}': ${JSON.stringify(resolvedValue)} (Source: ${source})`);
     }
 
     /**
@@ -67,6 +71,7 @@ export class TransformationContext {
         }
 
         const output = {};
+        console.log("Candidate Entries: ", this.candidates.entries());
 
         for (const [key, candidates] of this.candidates.entries()) {
             if (candidates.length > 0) {
@@ -83,9 +88,7 @@ export class TransformationContext {
         // Append Notes if any
         if (this.notes.length > 0) {
             output["RecipientNotes"] = this.notes.join(" ||| ");
-        }
-
-        // If we want to return a FULL object (Input + Changes), we do:
-        return { ...this.originalInput, ...output };
+        }        
+        return output
     }
 }

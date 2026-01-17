@@ -227,7 +227,7 @@
               "id": "ebfef62f-daf8-4a1e-8261-c6be0dab5fd3",
               "type": "condition",
               "field": "var(patient_age)",
-              "value": "70",
+              "value": "12",
               "operator": "less_than",
               "caseSensitive": false
             },

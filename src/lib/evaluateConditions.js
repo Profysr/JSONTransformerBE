@@ -1,6 +1,6 @@
 import { OPERATORS, getValue } from "../utils/Operators.js";
 import logger from "./logger.js";
-import { isEmpty, resolveVariable } from "../utils/util.js";
+import { isEmpty, resolveDeep } from "../utils/util.js";
 
 /**
  * Executes a single rule condition against the input data.
@@ -13,9 +13,14 @@ import { isEmpty, resolveVariable } from "../utils/util.js";
  */
 export const resolveValue = (path, inputData, localContext = {}, ruleKey = "", isField = false) => {
   if (typeof path !== "string") return path;
-  if (path.startsWith("var(")) {
-    return resolveVariable(path, inputData, localContext, ruleKey);
-  }
+
+  // Try to resolve as a variable first (recursively if needed, though usually just a string here)
+  const resolved = resolveDeep(path, inputData, localContext, ruleKey);
+
+  // If resolution happened (it was a var() string), return it
+  if (resolved !== path) return resolved;
+
+  // Otherwise, try implicit path resolution (e.g. "metrics.0.value")
   const val = getValue(path, localContext, inputData);
 
   // If it's the 'value' part and not found as a property, treat as literal

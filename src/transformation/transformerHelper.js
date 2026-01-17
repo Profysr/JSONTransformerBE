@@ -3,6 +3,7 @@ import { processMetrics } from "./handlers/metricsHandler.js";
 import { processReadCodes } from "./handlers/readCodesHandler.js";
 import { processGeneralRules } from "./generalProcessor.js";
 import { TransformationContext } from "./TransformationContext.js";
+import { cleanDeep } from "../utils/util.js";
 
 export const transformerHelper = (inputData, configRules) => {
     const startTime = Date.now();
@@ -48,14 +49,9 @@ export const transformerHelper = (inputData, configRules) => {
 
     // 2. Resolve Final Output
     const finalOutput = context.getFinalOutput();
-
+    const mergedOutput = { ...inputData, ...finalOutput };
     const totalDuration = Date.now() - startTime;
     logger.info(`Data transformation completed successfully in ${totalDuration}ms`);
 
-    // Log final result only if not killed (or simplified)
-    if (!context.killResult) {
-        logger.info("Final transformed data keys:", Object.keys(finalOutput));
-    }
-
-    return finalOutput;
+    return cleanDeep(mergedOutput);
 };

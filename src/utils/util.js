@@ -40,11 +40,17 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
     const inputVal = varMatch[1].trim();
 
     /**
-     * if the fieldKey is the same as the inputVal then there's no need of mapping. It's same as we're mapping the letter_date value to letter_date field in input JSON
+     * if the inputVal is exactly the same as the fieldKey AND the value in inputData
+     * is already a var string pointing to itself, we should try to resolve it from the original input.
+     * However, the current engine logic basically says "if I'm mapping letter_type to letter_type, just use what's in inputData".
      */
     if (inputVal === fieldKey) {
-        logger.warn(`[${fieldKey}] Identity assignment found. Skipping transformation`);
-        return inputData[fieldKey];
+        const existingVal = inputData[fieldKey];
+        if (typeof existingVal === "string" && existingVal.includes(`var(${fieldKey})`)) {
+            logger.warn(`[${fieldKey}] Circular reference detected in inputData for '${fieldKey}'.`);
+            return existingVal;
+        }
+        return existingVal;
     }
 
     // Tries to resolve a nested property path ("inputData.letter_type")
@@ -69,6 +75,31 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
 };
 
 /**
+ * Recursively resolves variables in strings, arrays, and objects.
+ */
+export const resolveDeep = (value, inputData, localContext = {}, fieldKey = "") => {
+    if (value === null || value === undefined) return value;
+
+    if (typeof value === "string") {
+        return resolveVariable(value, inputData, localContext, fieldKey);
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => resolveDeep(item, inputData, localContext, fieldKey));
+    }
+
+    if (typeof value === "object") {
+        const resolvedObj = {};
+        for (const [k, v] of Object.entries(value)) {
+            resolvedObj[k] = resolveDeep(v, inputData, localContext, fieldKey);
+        }
+        return resolvedObj;
+    }
+
+    return value;
+};
+
+/**
  * Normalize boolean-like values to actual boolean
  */
 export const toBoolean = (value) => {
@@ -77,4 +108,27 @@ export const toBoolean = (value) => {
         return value.toLowerCase() === "true";
     }
     return Boolean(value);
+};
+
+/**
+ * Recursively removes keys with undefined, null, or empty string values.
+ */
+export const cleanDeep = (obj) => {
+    if (obj === null || typeof obj !== 'object') {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj
+            .map(v => cleanDeep(v))
+            .filter(v => v !== undefined && v !== "");
+    }
+
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+        const cleanedValue = cleanDeep(value);
+        if (cleanedValue !== undefined && cleanedValue !== "") {
+            acc[key] = cleanedValue;
+        }
+        return acc;
+    }, {});
 };

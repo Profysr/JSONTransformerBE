@@ -45,9 +45,7 @@ export const processGeneralRules = (inputData, rules, context) => {
             // 4. Handle Matrix Assignments
             if (derivedValue.matrixAssignments && typeof derivedValue.matrixAssignments === "object") {
                 for (const [k, v] of Object.entries(derivedValue.matrixAssignments)) {
-                    const resolvedV = resolveValue(v, inputData, {}, `matrix:${fieldKey}`);
-                    context.addCandidate(k, resolvedV, `matrix:${fieldKey}`);
-                    logger.info(`[${fieldKey}] Matrix assignment: ${k} = ${resolvedV}`);
+                    context.addCandidate(k, v, `matrix:${fieldKey}`);
                 }
             }
             continue;
