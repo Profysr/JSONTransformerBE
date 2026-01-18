@@ -1,0 +1,245 @@
+import { trimString } from "./util.js";
+
+/* -------------------------------------------------------
+   Condition Parsing (Human Readable)
+------------------------------------------------------- */
+
+const parseConditionText = (rule) => {
+    if (!rule) return "";
+
+    // Grouped conditions
+    if (rule.type === "group" && Array.isArray(rule.rules)) {
+        const inner = rule.rules
+            .map(parseConditionText)
+            .filter(Boolean)
+            .join(` ${rule.logicType || "AND"} `);
+
+        return `(${inner})`;
+    }
+
+    const field = trimString(rule.field || "Unknown field");
+    const operator = trimString((rule.operator || "is").replace(/_/g, " "));
+    const value = trimString(rule.value);
+
+    return value
+        ? `${field} ${operator} "${value}"`
+        : `${field} ${operator}`;
+};
+
+/* -------------------------------------------------------
+   Outcome → Actions
+------------------------------------------------------- */
+
+const parseActions = (outcome) => {
+    const actions = [];
+
+    if (!outcome) return actions;
+
+    // Value handling
+    if (outcome.value === "skip") {
+        actions.push({ type: "skip" });
+    } else if (outcome.value) {
+        actions.push({
+            type: "set_value",
+            text: trimString(outcome.value)
+        });
+    }
+
+    // Kill automation
+    if (outcome.isKilled) {
+        actions.push({
+            type: "kill",
+            batch: trimString(outcome.batch_name || "Unknown")
+        });
+    }
+
+    // Notes
+    if (outcome.notes) {
+        actions.push({
+            type: "note",
+            text: trimString(outcome.notes)
+        });
+    }
+
+    // Matrix assignments (RAW, trimmed, readable)
+    if (outcome.matrixAssignments && Object.keys(outcome.matrixAssignments).length) {
+        const assignments = {};
+
+        Object.entries(outcome.matrixAssignments).forEach(([key, value]) => {
+            const k = trimString(key);
+            const v = trimString(value);
+            if (k && v) assignments[k] = v;
+        });
+
+        if (Object.keys(assignments).length) {
+            actions.push({
+                type: "assignments",
+                values: assignments
+            });
+        }
+    }
+
+    return actions;
+};
+
+/* -------------------------------------------------------
+   Advanced (Cascading) Logic Parser
+------------------------------------------------------- */
+
+const parseAdvancedLogic = (field) => {
+    const clauses = field.value?.clauses || [];
+    const rules = [];
+
+    clauses.forEach((clause, index) => {
+        const conditionText = clause.rules
+            .map(parseConditionText)
+            .filter(Boolean)
+            .join(` ${clause.rootLogicType || "AND"} `);
+
+        rules.push({
+            when: `${index === 0 ? "IF" : "ELSE IF"} ${conditionText}`,
+            then: {
+                actions: parseActions(clause.outcome)
+            }
+        });
+    });
+
+    const elseActions = parseActions(field.value?.else);
+
+    return {
+        type: "advanced",
+        rules,
+        else: {
+            actions: elseActions
+        }
+    };
+};
+
+/* -------------------------------------------------------
+   Table Parser
+------------------------------------------------------- */
+
+const parseTable = (field) => {
+    if (!Array.isArray(field.value) || field.value.length === 0) {
+        return {
+            type: "table",
+            text: "Table is empty."
+        };
+    }
+
+    const rows = field.value.map((row, index) => {
+        // Try to find a human-readable title (first meaningful column)
+        let rowTitle = `Row ${index + 1}`;
+        const keys = Object.keys(row);
+        const keyColumn = keys.find(k => k !== "id" && k !== "addCode") || keys[0]; // Heuristic for title
+
+        if (row[keyColumn]) {
+            rowTitle = row[keyColumn];
+        }
+
+        const details = {};
+        keys.forEach((key) => {
+            if (key === "id") return; // Skip internal ID
+
+            // Clean value
+            const val = row[key];
+            if (val !== "" && val !== null && val !== undefined) {
+                // Format arrays or objects if necessary, otherwise just use value
+                details[key] = val;
+            }
+        });
+
+        return {
+            title: rowTitle,
+            details: details
+        };
+    });
+
+    return {
+        type: "table",
+        rowCount: field.value.length,
+        rows: rows
+    };
+};
+
+/* -------------------------------------------------------
+   Field Parser (ENTRY POINT PER FIELD)
+------------------------------------------------------- */
+
+const parseField = (field) => {
+    try {
+        const id = trimString(field.id);
+        const label = trimString(field.label);
+
+        // TABLE
+        if (field.type === "table") {
+            return {
+                id,
+                label,
+                output: parseTable(field)
+            };
+        }
+
+        // ADVANCED LOGIC (Cascading)
+        if (field.value && field.value.type === "cascading-advanced") {
+            return {
+                id,
+                label,
+                output: parseAdvancedLogic(field)
+            };
+        }
+
+        // SIMPLE VALUE / FALLBACK
+        // (Includes logic_input with simple value, boolean, dropdown, input)
+        return {
+            id,
+            label,
+            output: {
+                type: "simple",
+                text: `Use this value "${trimString(field.value) || ""}"`
+            }
+        };
+
+    } catch (error) {
+        console.error(`Error parsing field '${field?.id}':`, error);
+        return {
+            id: field?.id || "unknown_error",
+            label: field?.label || "Error",
+            output: {
+                type: "error",
+                text: `Failed to parse field: ${error.message}`
+            }
+        };
+    }
+};
+
+/* -------------------------------------------------------
+   Section Parser
+------------------------------------------------------- */
+
+const parseSection = (section, options) => {
+    if (!Array.isArray(section.fields)) return null;
+
+    let fields = section.fields;
+
+    if (!options.includeInactive) {
+        fields = fields.filter(f => f.isActive === true);
+    }
+
+    if (!fields.length) return null;
+
+    return fields.map(parseField);
+};
+
+/* -------------------------------------------------------
+   MAIN EXPORT
+------------------------------------------------------- */
+
+export const parseConfiguration = (config, options = { includeInactive: false }) => {
+    if (!Array.isArray(config)) return [];
+
+    return config
+        .map(section => parseSection(section, options))
+        .flat()
+        .filter(Boolean);
+};

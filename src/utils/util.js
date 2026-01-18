@@ -109,26 +109,3 @@ export const toBoolean = (value) => {
     }
     return Boolean(value);
 };
-
-/**
- * Recursively removes keys with undefined, null, or empty string values.
- */
-// export const cleanDeep = (obj) => {
-//     if (obj === null || typeof obj !== 'object') {
-//         return obj;
-//     }
-
-//     if (Array.isArray(obj)) {
-//         return obj
-//             .map(v => cleanDeep(v))
-//             .filter(v => v !== undefined && v !== "");
-//     }
-
-//     return Object.entries(obj).reduce((acc, [key, value]) => {
-//         const cleanedValue = cleanDeep(value);
-//         if (cleanedValue !== undefined && cleanedValue !== "") {
-//             acc[key] = cleanedValue;
-//         }
-//         return acc;
-//     }, {});
-// };

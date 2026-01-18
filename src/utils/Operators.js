@@ -20,10 +20,10 @@ export const OPERATORS = {
     not_equals: (s, t, p) => isNumeric(s) && isNumeric(t) ? Number(s) !== Number(t) : p(s) !== p(t),
     starts_with: (s, t, p) => p(s).startsWith(p(t)),
     ends_with: (s, t, p) => p(s).endsWith(p(t)),
+    not_starts_with : (s, t, p) => !p(s).startsWith(p(t)),
+    not_ends_with: (s, t, p) => !p(s).endsWith(p(t)),
     is_empty: (s) => !s || (typeof s === "string" && !s.trim()) || (Array.isArray(s) && !s.length) || (typeof s === "object" && !Object.keys(s).length),
     is_not_empty: (s) => !OPERATORS.is_empty(s),
-    is_null: (s) => s === null,
-    is_not_null: (s) => s !== null,
     greater_than: (s, t) => isNumeric(s) && isNumeric(t) && Number(s) > Number(t),
     less_than: (s, t) => isNumeric(s) && isNumeric(t) && Number(s) < Number(t),
     less_than_or_equal_to: (src, tgt) =>

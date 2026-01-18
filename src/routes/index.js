@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { processTransformation } from "../controllers/transformationController.js";
-import logger from "../lib/logger.js";
+import { parseRules } from "../controllers/ruleParserController.js";
 import { deriveJSONRules } from "../lib/deriveJSON.js";
 import fs from "fs";
 import path from "path";
@@ -19,6 +19,8 @@ router.get("/", (req, res) => {
 });
 
 router.post("/transform/:inst_id", processTransformation);
+router.post("/parse-rules", parseRules);
+
 
 /** Created it for testing purpose */
 router.get(
@@ -27,7 +29,7 @@ router.get(
     const inputPath = path.join(process.cwd(), "rules.json");
 
     if (!fs.existsSync(inputPath)) {
-      return next(new ErrorHandler(404, "input.json not found"));
+      return next(new ErrorHandler(404, "rules.json not found"));
     }
 
     const fileContent = fs.readFileSync(inputPath, "utf-8");
