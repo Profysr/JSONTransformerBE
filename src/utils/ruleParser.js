@@ -1,33 +1,40 @@
 import { trimString } from "./util.js";
 
 /* -------------------------------------------------------
-   Condition Parsing (Human Readable)
+   Condition Parsing (Structured, Readable)
 ------------------------------------------------------- */
 
-const parseConditionText = (rule) => {
-    if (!rule) return "";
+const parseConditionNode = (rule) => {
+    if (!rule) return null;
 
-    // Grouped conditions
+    // Grouped logic
     if (rule.type === "group" && Array.isArray(rule.rules)) {
-        const inner = rule.rules
-            .map(parseConditionText)
-            .filter(Boolean)
-            .join(` ${rule.logicType || "AND"} `);
-
-        return `(${inner})`;
+        return {
+            type: "group",
+            logic: trimString(rule.logicType || "AND"),
+            children: rule.rules
+                .map(parseConditionNode)
+                .filter(Boolean)
+        };
     }
 
+    // Simple condition
     const field = trimString(rule.field || "Unknown field");
-    const operator = trimString((rule.operator || "is").replace(/_/g, " "));
+    const operator = trimString(
+        (rule.operator || "is").replace(/_/g, " ")
+    );
     const value = trimString(rule.value);
 
-    return value
-        ? `${field} ${operator} "${value}"`
-        : `${field} ${operator}`;
+    return {
+        type: "rule",
+        text: value
+            ? `${field} ${operator} "${value}"`
+            : `${field} ${operator}`
+    };
 };
 
 /* -------------------------------------------------------
-   Outcome → Actions
+   Outcome → Actions (UNCHANGED)
 ------------------------------------------------------- */
 
 const parseActions = (outcome) => {
@@ -61,15 +68,20 @@ const parseActions = (outcome) => {
         });
     }
 
-    // Matrix assignments (RAW, trimmed, readable)
-    if (outcome.matrixAssignments && Object.keys(outcome.matrixAssignments).length) {
+    // Matrix assignments (RAW, trimmed)
+    if (
+        outcome.matrixAssignments &&
+        Object.keys(outcome.matrixAssignments).length
+    ) {
         const assignments = {};
 
-        Object.entries(outcome.matrixAssignments).forEach(([key, value]) => {
-            const k = trimString(key);
-            const v = trimString(value);
-            if (k && v) assignments[k] = v;
-        });
+        Object.entries(outcome.matrixAssignments).forEach(
+            ([key, value]) => {
+                const k = trimString(key);
+                const v = trimString(value);
+                if (k && v) assignments[k] = v;
+            }
+        );
 
         if (Object.keys(assignments).length) {
             actions.push({
@@ -83,34 +95,33 @@ const parseActions = (outcome) => {
 };
 
 /* -------------------------------------------------------
-   Advanced (Cascading) Logic Parser
+   Advanced (Cascading) Logic Parser (UPDATED)
 ------------------------------------------------------- */
 
 const parseAdvancedLogic = (field) => {
-    const clauses = field.value?.clauses || [];
+    const clauses = field?.value?.clauses || [];
     const rules = [];
 
     clauses.forEach((clause, index) => {
-        const conditionText = clause.rules
-            .map(parseConditionText)
-            .filter(Boolean)
-            .join(` ${clause.rootLogicType || "AND"} `);
-
         rules.push({
-            when: `${index === 0 ? "IF" : "ELSE IF"} ${conditionText}`,
+            when: {
+                keyword: index === 0 ? "IF" : "ELSE IF",
+                logic: trimString(clause.rootLogicType || "AND"),
+                conditions: clause.rules
+                    .map(parseConditionNode)
+                    .filter(Boolean)
+            },
             then: {
                 actions: parseActions(clause.outcome)
             }
         });
     });
 
-    const elseActions = parseActions(field.value?.else);
-
     return {
         type: "advanced",
         rules,
         else: {
-            actions: elseActions
+            actions: parseActions(field?.value?.else)
         }
     };
 };
@@ -134,7 +145,7 @@ const parseTable = (field) => {
         const keyColumn = keys.find(k => k !== "id" && k !== "addCode") || keys[0]; // Heuristic for title
 
         if (row[keyColumn]) {
-            rowTitle = row[keyColumn];
+            rowTitle = trimString(row[keyColumn]);
         }
 
         const details = {};
@@ -142,7 +153,7 @@ const parseTable = (field) => {
             if (key === "id") return; // Skip internal ID
 
             // Clean value
-            const val = row[key];
+            const val = trimString(row[key]);
             if (val !== "" && val !== null && val !== undefined) {
                 // Format arrays or objects if necessary, otherwise just use value
                 details[key] = val;
