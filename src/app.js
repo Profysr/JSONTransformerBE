@@ -3,9 +3,36 @@ import router from "./routes/index.js";
 import logger from "./lib/logger.js";
 import { errorMiddleware } from "./middleware/errorHandler.js";
 import { jsonParseErrorHandler } from "./middleware/jsonParseErrorHandler.js";
+import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Whitelist of allowed origins
+const whitelist = ["http://localhost:5173", "http://localhost:3001"];
+
+// Define CORS options with dynamic origin check
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (whitelist.includes(origin)) {
+      callback(null, true); // ✅ Allowed
+    } else {
+      callback(new Error("Not allowed by CORS")); // ❌ Blocked
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+// ✅ Apply CORS middleware globally
+app.use(cors(corsOptions));
+
+// ✅ Handle pre-flight requests explicitly
+app.options("/", cors(corsOptions));
 
 // Middleware to parse incoming JSON data
 app.use(express.json());
@@ -38,7 +65,6 @@ app.use((req, res, next) => {
   });
 });
 
-
 // --- Error Middleware (MUST BE LAST) ---
 app.use(errorMiddleware);
 
@@ -46,27 +72,29 @@ app.use(errorMiddleware);
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log(
-    `Use POST request to http://localhost:${PORT}/api/v1/transform/<client_id>/ with your raw JSON in the body.`
+    `Use POST request to http://localhost:${PORT}/api/v1/transform/<client_id>/ with your raw JSON in the body.`,
   );
 });
 
-
 // --- Global Crash Handler Setup ---
-process.on('uncaughtException', (err) => {
+process.on("uncaughtException", (err) => {
   // 1. Log the final crash details immediately.
   const crashLogEntry = logger._formatLog(
     "CRASH",
     "Process exiting due to Uncaught Exception!",
-    { err }
+    { err },
   );
 
   console.error(JSON.stringify(crashLogEntry));
 });
 
-
 // Handle Unhandled Promise Rejections
-process.on('unhandledRejection', (reason, promise) => {
-  const rejectionLogEntry = logger._formatLog('REJECTION', 'Unhandled Promise Rejection!', { reason, promise });
+process.on("unhandledRejection", (reason, promise) => {
+  const rejectionLogEntry = logger._formatLog(
+    "REJECTION",
+    "Unhandled Promise Rejection!",
+    { reason, promise },
+  );
   console.error(JSON.stringify(rejectionLogEntry));
 
   process.exit(1);

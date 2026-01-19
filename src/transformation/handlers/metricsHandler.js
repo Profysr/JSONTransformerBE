@@ -68,32 +68,6 @@ const createMetricObj = (rowContext, rules) => {
 // ============================================
 
 export const processMetrics = (inputData, rules, context) => {
-
-    // Step 1: Evaluate add_metrics toggle
-    let useMetrics = context.getCandidate("add_metrics");
-
-    if (useMetrics === undefined) {
-        useMetrics = applyRule(inputData, rules.add_metrics, "add_metrics");
-    } else {
-        logger.info(`[Metrics] Using context override for add_metrics: ${useMetrics}`);
-    }
-
-    if (!isEmpty(useMetrics) && typeof useMetrics === "object" && useMetrics.isKilled === true) {
-        logger.warn(`[Metrics] add_metrics toggle triggered KILL`);
-        context.setKilled({
-            ...useMetrics,
-            isKilled: true,
-            field: "add_metrics",
-        });
-        return;
-    }
-
-    if (useMetrics == false) {
-        logger.info(`[Metrics] Skipping metrics section due to toggle (add_metrics = ${useMetrics})`);
-        context.addCandidate("metrics", [], "section:metrics (skip)");
-        return;
-    }
-
     const metricsTable = rules.metrics_list || {};
     const inputMetrics = (inputData.output?.metrics) || (inputData.metrics) || {};
 

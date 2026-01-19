@@ -4,6 +4,10 @@ import { processReadCodes } from "./handlers/readCodesHandler.js";
 import { processGeneralRules } from "./handlers/generalProcessor.js";
 import { TransformationContext } from "./TransformationContext.js";
 
+// if condition true, forward Letter = Yes
+
+// forward Letter = No 
+
 export const transformerHelper = (inputData, configRules) => {
     const startTime = Date.now();
     logger.info(`Configuration has ${Object.keys(configRules).length} sections. Started JSON Transformation`);
