@@ -1,6 +1,6 @@
 
 import logger from "../lib/logger.js";
-import { resolveDeep } from "../utils/util.js";
+import { resolveDeep, isEmpty } from "../utils/util.js";
 
 export class TransformationContext {
     constructor(inputData) {
@@ -84,6 +84,7 @@ export class TransformationContext {
 
         const output = {};
 
+        // STRATEGY: First Candidate Wins (Index 0).
         for (const [key, candidates] of this.candidates.entries()) {
             if (candidates.length > 0) {
                 // STRATEGY: First Match Wins
@@ -96,10 +97,39 @@ export class TransformationContext {
             }
         }
 
+        // Ensure default empty collections for specific transformed fields if they were not populated
+        if (!output.hasOwnProperty("transformed_metrics")) {
+            output["transformed_metrics"] = [];
+        }
+        if (!output.hasOwnProperty("transformed_letter_codes_list")) {
+            output["transformed_letter_codes_list"] = [];
+        }
+        if (!output.hasOwnProperty("transformed_letter_codes")) {
+            output["transformed_letter_codes"] = "";
+        }
+
         // Append Notes if any
         if (this.notes.length > 0) {
-            output["RecipientNotes"] = this.notes.join(" ||| ");
+            output["notes"] = this.notes;
+            output["AddNotesToRecipient"] = true;
+        } else {
+            output["AddNotesToRecipient"] = false;
         }
-        return output
+
+        const finalOutput = { ...this.originalInput, ...output };
+
+        
+        // Clean up: Remove any fields that are empty (null, undefined, or empty string)
+        for (const key of Object.keys(finalOutput)) {
+            if (isEmpty(finalOutput[key])) {
+                finalOutput[key] = "skip";
+            }
+        }
+        // Remove old field names as we have "updated" them to transformed_* versions
+        delete finalOutput.metrics;
+        delete finalOutput.letter_codes;
+        delete finalOutput.letter_codes_list;
+        
+        return finalOutput;
     }
 }

@@ -1,5 +1,5 @@
 import { getAccessToken } from "../auth/index.js";
-import { SERVERS } from "../global/Constants.js";
+import { CONFIG } from "../global/AppConfig.js";
 import { deriveJSONRules } from "../lib/deriveJSON.js";
 import logger from "../lib/logger.js";
 import { makeRequestWithRetry } from "../lib/makeReq.js";
@@ -10,7 +10,7 @@ import { transformerHelper } from "../transformation/transformerHelper.js";
 /** Fetching configuration rules here */
 export const fetchConfigRules = async (inst_id, letter_type) => {
   /** Defining endpoint dynamically */
-  let BASE_URL = SERVERS["shary_prod"].BASE_URL;
+  let BASE_URL = CONFIG.shary.apiUrl;
   let endpointUrl = `${BASE_URL}/automation_config/letter_type_config_filter/${inst_id}/`;
   let payload = {
     letter_type: letter_type,
@@ -56,7 +56,7 @@ export const processTransformation = catchAsyncHandler(
     let letter_type = inputData?.letter_type;
 
     /** Defining logs endpoint dynamically */
-    let BASE_URL = SERVERS["shary_prod"].BASE_URL;
+    let BASE_URL = CONFIG.shary.apiUrl;
     let apiEndpoint = `${BASE_URL}/automation_config/transformation_logs/${inst_id
       .toLowerCase()
       .trim()}`;
@@ -114,9 +114,8 @@ export const processTransformation = catchAsyncHandler(
         return res.status(200).json({
           success: false,
           message: `Transformation terminated by rule applied to ${output.field} for value ${output.value}. The resulting value is retained.`,
-          KillResponse: {
-            ...output
-          },
+          isKilled: true,
+          output,
         });
       }
 
@@ -124,6 +123,7 @@ export const processTransformation = catchAsyncHandler(
         success: true,
         message:
           "Data successfully transformed according to client-specific rules.",
+        isKilled: false,
         output,
       });
     } catch (error) {

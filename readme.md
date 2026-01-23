@@ -1,130 +1,62 @@
-# Transformation Module Backend
+# JSONTransformerBE: Advanced Logic Flow
 
-This application is designed to process and transform JSON data based on configurable rules. Think of it as a **Smart Sorting Hat** for data: it takes raw information (like a letter), reads a rulebook, and decides exactly how that information should look in the end.
-
----
-
-## 🚀 How It Works (Simplified)
-
-Imagine a very strict teacher grading a student's exam paper.
-1.  **The Student's Paper (Input)**: The teacher reads the answers but **never writes on the original paper**. The original paper stays clean.
-2.  **The Grade Sheet (Output)**: The teacher writes the final grades on a brand new sheet.
-3.  **The Rulebook (Configuration)**: The teacher follows a specific set of rules to decide the grades.
-
-### Key Features
-
-#### 1. "Don't Touch the Original!" (Immutable Input)
-The system **never changes the original input**. It treats the input as "Read-Only". If a rule says "change `color` to `red`", it doesn't cross out the old color on the input; it just writes "Color: Red" on the new output sheet. This prevents mistakes where one rule accidentally messes up data for another rule.
-
-#### 2. "First Rule Wins" (Priority)
-Sometimes, multiple rules might try to set the same field.
-*   **Rule 1 says**: "If the letter is urgent, set `priority` to `High`."
-*   **Rule 5 says**: "If the patient is under 18, set `priority` to `Medium`."
-
-What happens if both are true?
-The system collects **all** possible answers ("High" and "Medium"). Then, it picks the **First One** that matched. So, if Rule 1 matched first, the priority is `High`. This ensures a clear order of operations.
-
-#### 3. "The Kill Switch" (Deep Kill)
-Some rules are so important that if they fail (or match a specific condition), the whole process should **stop immediately**.
-*   **Example**: "If the letter has no patient ID, STOP EVERYTHING (Kill)."
-*   If this happens, the system stops instantly and returns a special "Killed" report, explaining exactly why it stopped. No further rules are checked.
-
-#### 4. "Two Birds, One Stone" (Multiple Assignments)
-A single rule can set multiple things at once.
-*   **Rule**: "If `condition` is `Critical`..."
-*   **Outcome**: Set `priority = "High"` **AND** set `flag_color = "Red"`.
-The system handles both of these assignments seamlessly from one check.
+This document provides a comprehensive overview of how advanced logic is configured and executed within the system, from the initial transformation trigger to the final field resolution.
 
 ---
 
-## 📚 Example by Analogy
+## 1. Entry Point: Orchestration
+The transformation starts in [transformerHelper.js](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/transformation/transformerHelper.js). It takes `inputData` and `configRules` and iterates through the defined sections (e.g., `metrics`, `readCodes`, or general fields).
 
-**Scenario**: We are processing a **Referral Letter**.
+- **Global Context**: A `TransformationContext` is initialized to hold final results and track state (like "kill" signals).
+- **Handlers**: Depending on the section, it delegates to specialized processors:
+    - [metricsHandler.js](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/transformation/handlers/metricsHandler.js) for `metrics`.
+    - [readCodesHandler.js](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/transformation/handlers/readCodesHandler.js) for `readCodes`.
+    - [generalProcessor.js](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/transformation/handlers/generalProcessor.js) for everything else.
 
-**Input Data (The Letter):**
-```json
-{
-  "type": "Urgent Referral",
-  "patient_age": 12,
-  "has_id": true
-}
-```
+## 2. Rule Iteration: The Rule Bridge
+In [generalProcessor.js](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/transformation/handlers/generalProcessor.js), the system loops through every key in the configuration. For each field, it calls [applyRule](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/transformation/Evaluators/ApplyRule.js).
 
-**The Rules:**
-1.  **Check ID**: If `has_id` is FALSE -> **KILL** (Stop processing).
-2.  **Set Status**: If `type` is "Urgent Referral" -> Set `status` = "Urgent".
-3.  **Set Priority (Child)**: If `patient_age` < 18 -> Set `status` = "Pediatric Priority".
+- **Rule Types**: `applyRule` determines if a field is a static value, a variable reference (`var(field)`), or if it contains **Advanced Logic** (`type: "cascading-advanced"`).
+- **Delegation**: If advanced logic is detected, it hands off execution to `evaluateCascadingAdvanced`.
 
-**The Process:**
+## 3. Evaluation Hierarchy: Clauses, Groups, and Conditions
+The core logic evaluation happens in [EvaluateRule.js](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/transformation/Evaluators/EvaluateRule.js).
 
-1.  **Check ID**: It has an ID (`true`). Safe to continue.
-2.  **Set Status**: Match! It adds Candidate #1 for `status`: **"Urgent"**.
-3.  **Set Priority**: Match! It adds Candidate #2 for `status`: **"Pediatric Priority"**.
+1.  **Cascading Clauses**: The engine iterates through `clauses` (If/Else-If blocks). The *first* clause to return `true` triggers its `outcome`.
+2.  **Groups and Logic Types**: Within a clause, rules can be nested in "groups" with `logicType` ("AND" or "OR").
+3.  **Recursion**: The `evaluateRuleList` function recursively evaluates these groups until it reaches individual **Condition Items**.
 
-**The Final Result:**
-The system looks at the `status` field. It sees two candidates ("Urgent", "Pediatric Priority").
-It applies the **"First Rule Wins"** logic.
-**Final Output**: `status` = **"Urgent"**.
+## 4. Deep Dive: Field Resolution (Confusion Cleared)
+Before a condition can be checked, the engine must resolve the values for both the **Field** (left side) and the **Value** (right side). This happens in [EvaluateConditions.js](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/lib/EvaluateConditions.js) via the `resolveValue` function.
 
----
+### A. Variables: `var(path)`
+If a string matches the `var(...)` syntax, it is treated as an **Explicit Path**.
+- **Process**: `resolveDeep` (in `util.js`) extracts the path inside the parentheses.
+- **Lookup**: It first looks in regular input data, but can also resolve from a `localContext` if provided.
+- **Example**: `var(patient.age)` will look for `{ "patient": { "age": 25 } }` in the input.
 
-## Technical Architecture
+### B. Implicit Paths (Auto-Resolution)
+If a string is *not* wrapped in `var()`, the engine treats it as an **Implicit Path** first.
+- **Process**: Using `getValue` from `Operators.js`, the engine splits the string by `.` and tries to traverse the input data.
+- **Example**: `metrics.0.value` will automatically navigate the array and objects to find the value.
 
-The project follows a modular architecture mainly consisting of:
+### C. Literals: Constants
+The system distinguishes between finding a data point and using a fixed string.
+- **Process**: If a path *cannot* be resolved in the data, the system checks if it was intended as a literal.
+- **Behavior**:
+    - For the **Field** (left side of condition): If the path isn't found, it returns `false` (skipping condition).
+    - For the **Value** (right side of condition): If the path isn't found, it treats the string as a **Literal Constant**.
+- **Result**: `equals | patient_type | VIP` will check if the data at `patient_type` is literally the string `"VIP"`.
 
--   **Entry Point (`app.js`)**: Configures the Express server.
--   **Routing (`routes/`)**: Defines API endpoints.
--   **Controllers (`controllers/`)**: Logic for handling requests.
--   **Transformation Engine (`src/transformation/`)**:
-    -   `TransformationContext.js`: The "brain" that collects all candidates and handles the final decision.
-    -   `generalProcessor.js`, `metricsHandler.js`, `readCodesHandler.js`: Specialized workers that process different parts of the rules.
-    -   `ApplyRule.js` & `EvaluateRule.js`: The "judges" that check if a rule matches.
--   **Logging (`lib/logger.js`)**: Records every step. In production, it buffers logs and sends them to a central server.
+## 5. Condition Evaluation: Operators
+Once values are resolved, [evaluateCondition](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/lib/EvaluateConditions.js) executes the check:
+- **Operators**: Handled by the `OPERATORS` map in [Operators.js](file:///c:/Users/bilal/OneDrive/Desktop/JSONTransformerBE/src/utils/Operators.js).
+- **Case Sensitivity**: If `case_sensitive` is true, values are compared exactly. Otherwise, they are normalized to lowercase strings.
+- **Unary Operators**: Checks like `is_empty` or `is_null` only look at the resolved field value.
 
----
-
-## Installation & Running
-
-### Prerequisites
-- Node.js (v20+ recommended)
-- npm
-
-### Setup
-1.  Clone the repository.
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Set up environment variables in `.env`.
-
-### Running
--   **Development**: `npm run dev`
--   **Production**: `npm start`
-
----
-
-## API Endpoints
-
-### 1. Transform Data
-**URL**: `/api/v1/transform/:inst_id/:letter_type`
-**Method**: `POST`
-
-**Request**:
-```json
-{
-  "letter_type": "Discharge",
-  "patient_name": "John Doe",
-  ...
-}
-```
-
-**Response (Success)**:
-```json
-{
-  "status": "success",
-  "output": {
-    "status": "Urgent",
-    "RecipientNotes": "Processed successfully."
-  }
-}
-```
+## 6. Outcome Processing
+If all conditions in a clause are met, an `outcome` object is returned to the handler.
+- **`value`**: The primary result for the field. If set to `"skip"`, the field is ignored.
+- **`notes`**: Additional metadata added to a global notes array in the transformation response.
+- **`isKilled`**: If true, the entire transformation stops immediately, and a "kill status" is returned.
+- **`matrixAssignments`**: A set of additional key-value pairs to be added to the final JSON alongside the primary field.

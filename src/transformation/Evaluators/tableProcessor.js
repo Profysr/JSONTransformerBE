@@ -53,6 +53,11 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
                         context.addCandidate(mKey, mVal, `matrix:${sectionKey}:${fieldKey}`);
                     }
                 }
+
+                // Apply Recipient Notes if available
+                if (context && (result.notes)) {
+                    context.addNote(result.notes);
+                }
             }
 
             if (finalValue !== val) {
@@ -71,6 +76,8 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         // 1. Evaluate "Should Skip" logic
         const shouldAddValue = evaluateField(skipField, row[skipField], row);
 
+        console.log("ShouldAddValue: ", shouldAddValue);
+        
         /**
          * Checking if automation needs to be killed or row should be skipped
          */
@@ -79,7 +86,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
             return { ...shouldAddValue, sectionKey, rowIdx: index };
         }
 
-        if (row.hasOwnProperty(skipField) && (shouldAddValue == false)) {
+        if (shouldAddValue == false || shouldAddValue == "false") {
             logger.info(`[${sectionKey}][Table][${rowId}] Row skipped.`);
             if (onRowSkip) onRowSkip(row, inputData, { index });
             continue;

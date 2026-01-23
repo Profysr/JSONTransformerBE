@@ -68,7 +68,8 @@ export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, local
             );
             return {
                 ...outcome, // Return full object (value, notes, batch_name, etc.)
-                fieldKey,
+                value: outcome.value == "skip" ? "true" : outcome.value,
+                field: fieldKey,
                 isKilled,
             };
         } else {
@@ -90,6 +91,7 @@ export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, local
     return {
         ...elseBlock,
         value: elseValue,
-        isKilled: isKilled,
+        field: fieldKey,
+        isKilled,
     };
 };

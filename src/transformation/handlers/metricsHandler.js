@@ -1,6 +1,4 @@
 import logger from "../../lib/logger.js";
-import { isEmpty } from "../../utils/util.js";
-import { applyRule } from "../Evaluators/ApplyRule.js";
 import { processTableRules } from "../Evaluators/tableProcessor.js";
 import { applyTemplate } from "../Evaluators/TemplateEngine.js";
 
@@ -145,9 +143,7 @@ export const processMetrics = (inputData, rules, context) => {
         return;
     }
 
-    // Add to Context Candidates
-    if (results && results.length > 0) {
-        context.addCandidate("metrics", results, "section:metrics");
-        logger.info(`[Metrics] Added ${results.length} metrics to candidates.`);
-    }
+    // Add to Context Candidates (Always add even if empty as per requirement)
+    context.addCandidate("transformed_metrics", results || [], "section:metrics");
+    logger.info(`[Metrics] Added ${results?.length || 0} metrics to candidates.`);
 };

@@ -1,6 +1,7 @@
 import { TransformFunctions } from "../../utils/TransformFunctions.js";
 import logger from "../../lib/logger.js";
 import { evaluateCondition as evaluateSingleCondition } from "../../lib/evaluateConditions.js";
+import { isEmpty } from "../../utils/util.js";
 
 /**
  * Helper: Recursively evaluate conditions (logical groups or operator rules)
@@ -125,7 +126,7 @@ export const applyTemplate = (template, context) => {
             value = config;
         }
 
-        result[key] = value === undefined ? "skip" : value;
+        result[key] = isEmpty(value) ? "skip" : value;
     }
 
     return result;

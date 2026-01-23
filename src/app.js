@@ -4,25 +4,27 @@ import logger from "./lib/logger.js";
 import { errorMiddleware } from "./middleware/errorHandler.js";
 import { jsonParseErrorHandler } from "./middleware/jsonParseErrorHandler.js";
 import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Whitelist of allowed origins
-const whitelist = ["http://localhost:5173", "http://localhost:3001"];
+// const whitelist = ["http://localhost:5173", "http://localhost:3001"];
 
 // Define CORS options with dynamic origin check
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) {
-      return callback(null, true);
-    }
-    if (whitelist.includes(origin)) {
-      callback(null, true); // ✅ Allowed
-    } else {
-      callback(new Error("Not allowed by CORS")); // ❌ Blocked
-    }
-  },
+  // origin: function (origin, callback) {
+  //   if (!origin) {
+  //     return callback(null, true);
+  //   }
+  //   if (whitelist.includes(origin)) {
+  //     callback(null, true); // ✅ Allowed
+  //   } else {
+  //     callback(new Error("Not allowed by CORS")); // ❌ Blocked
+  //   }
+  // },
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,

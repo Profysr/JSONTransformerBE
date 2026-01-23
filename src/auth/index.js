@@ -1,4 +1,4 @@
-import { SERVERS } from "../global/Constants.js";
+import { CONFIG } from "../global/AppConfig.js";
 
 // Persistent in-memory storage for the server process
 const tokenStore = {};
@@ -26,15 +26,15 @@ function saveData(server, data) {
 
 // Login and store tokens
 async function login(server) {
-  const url = `${SERVERS[server].BASE_URL}/login/`;
+  const url = `${CONFIG.shary.apiUrl}/login/`;
 
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: SERVERS[server].USERNAME,
-        password: SERVERS[server].PASSWORD,
+        email: CONFIG.shary.username,
+        password: CONFIG.shary.password,
       }),
     });
 
@@ -51,7 +51,7 @@ async function login(server) {
 async function apiCallForAccessToken(server) {
   try {
     const refreshToken = getData(key("refresh_token", server));
-    const url = `${SERVERS[server].BASE_URL}/token/refresh/`;
+    const url = `${CONFIG.shary.apiUrl}/token/refresh/`;
 
     const res = await fetch(url, {
       method: "POST",

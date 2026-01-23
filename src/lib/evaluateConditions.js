@@ -3,11 +3,6 @@ import logger from "./logger.js";
 import { isEmpty, resolveDeep } from "../utils/util.js";
 
 /**
- * Executes a single rule condition against the input data.
- * Returns false and logs an error if any required component is missing or invalid.
- */
-
-/**
  * Resolves a value from inputData, localContext, or as a literal.
  * Supports var(...) syntax and path resolution.
  */

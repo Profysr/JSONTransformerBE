@@ -1,5 +1,18 @@
+import { CONFIG } from "../global/AppConfig.js";
 import { isEmpty, trimString } from "../utils/util.js";
 import logger from "./logger.js";
+
+const displayLogs = (msg, type = "info") => {
+  if (CONFIG.nodeEnv.includes("production")) return;
+
+  if (type === "info") {
+    logger.info(msg);
+  } else if (type === "error") {
+    logger.error(msg);
+  } else if (type === "warn") {
+    logger.warn(msg);
+  }
+};
 
 /**
  * Recursively trims strings in the value.
@@ -8,14 +21,10 @@ import logger from "./logger.js";
 const cleanValue = (val, fieldId = "unknown") => {
   if (typeof val === "string") {
     const trimmed = val.trim();
-    // if (trimmed === "skip" || trimmed === "<skip>") {
-    //   logger.info(`[CleanValue][${fieldId}] Converted '${val}' to null`);
-    //   return null;
-    // }
     return trimmed;
   }
   if (Array.isArray(val)) {
-    return val.map(item => cleanValue(item, fieldId));
+    return val.map((item) => cleanValue(item, fieldId));
   }
   if (val !== null && typeof val === "object") {
     const newObj = {};
@@ -32,7 +41,9 @@ const cleanValue = (val, fieldId = "unknown") => {
  */
 const processTableValue = (rows, columns, fieldId) => {
   if (!Array.isArray(rows) || !Array.isArray(columns)) {
-    throw new Error(`[Table: ${fieldId}] Validation failed: 'rows' or 'columns' must be arrays.`);
+    throw new Error(
+      `[Table: ${fieldId}] Validation failed: 'rows' or 'columns' must be arrays.`,
+    );
   }
 
   const refinedRows = rows.map((row, index) => {
@@ -47,13 +58,19 @@ const processTableValue = (rows, columns, fieldId) => {
       if (col.dependsOn) {
         const depValue = trimString(row[col.dependsOn]);
         if (!depValue || depValue === "false") {
-          logger.info(`[Table: ${fieldId}][Row: ${index}] Skipping column '${colKey}' as its parent '${col.dependsOn}' has falsy value ('${depValue}')`);
-          // delete cleanRow[colKey];
+          displayLogs(
+            `[Table: ${fieldId}][Row: ${index}] Skipping column '${colKey}' as its parent '${col.dependsOn}' has falsy value ('${depValue}')`,
+            "info"
+          );
           cleanRow[colKey] = "";
           continue;
         }
       }
-      cleanRow[colKey] = cleanValue(row[colKey], `${fieldId}[${index}][${colKey}]`);
+
+      cleanRow[colKey] = cleanValue(
+        row[colKey],
+        `${fieldId}[${index}][${colKey}]`,
+      );
     }
 
     return cleanRow;
@@ -65,15 +82,14 @@ const processTableValue = (rows, columns, fieldId) => {
 /** Major function, deriving JSON Values and normalize them */
 export const deriveJSONRules = (config) => {
   const output = {};
-  logger.info("Starting JSON derivation from configuration...");
-
+displayLogs("Starting JSON derivation from configuration...", "info");
   if (!config || !Array.isArray(config) || config.length === 0) {
     throw new Error("Configuration data is missing or is not a valid array.");
   }
 
   config.forEach((section) => {
     const sectionName = trimString(section.sectionKey) || "Unknown Section";
-    logger.info(`Processing Section: `);
+    displayLogs(`Processing Section: ${sectionName}`, "info");
 
     const sectionData = {};
     let hasData = false;
@@ -87,7 +103,7 @@ export const deriveJSONRules = (config) => {
       const fieldLogId = `Field: ${fieldId || "unnamed"}`;
 
       if (field.isActive === false) {
-        logger.info(`[${fieldLogId}] Skipped: Inactive`);
+        displayLogs(`[${fieldLogId}] Skipped: Inactive`, "info");
         return;
       }
 
@@ -95,16 +111,22 @@ export const deriveJSONRules = (config) => {
 
       /** Separate method for table. Using same for the rest types */
       if (field.type === "table") {
-        const processedRows = processTableValue(field.value, field.columns, fieldId);
+        const processedRows = processTableValue(
+          field.value,
+          field.columns,
+          fieldId,
+        );
 
         if (!processedRows || processedRows.length === 0) {
-          logger.info(`[${fieldLogId}] Table result empty, skipping field.`);
+          displayLogs(`[${fieldLogId}] Table result empty, skipping field.`, "info");
           return;
         }
 
         // TRIM APPLIED HERE: Column metadata keys
         let columns = field.columns
-          .filter((curr) => curr.canConditional === true || !isEmpty(curr.dependsOn))
+          .filter(
+            (curr) => curr.canConditional === true || !isEmpty(curr.dependsOn),
+          )
           .map((curr) => ({
             key: trimString(curr.key),
             dependsOn: trimString(curr.dependsOn),
@@ -119,16 +141,16 @@ export const deriveJSONRules = (config) => {
       // Always include the field, even if value is empty/null
       sectionData[fieldId] = valueToInclude;
       hasData = true;
-      logger.info(`[${fieldLogId}] Added to output`);
+      displayLogs(`[${fieldLogId}] Added to output`, "info");
     });
 
     if (hasData && section.sectionKey) {
       output[trimString(section.sectionKey)] = sectionData;
     } else {
-      logger.info(`No data found or sectionKey missing.`);
+      displayLogs(`No data found or sectionKey missing.`, "warn");
     }
   });
 
-  logger.info("JSON derivation completed successfully.", output);
+  displayLogs("JSON derivation completed successfully.", "info");
   return output;
 };
