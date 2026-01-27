@@ -38,7 +38,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
             const result = applyRule(inputData, val, fieldKey, localRow, context);
 
             const source = `table:${sectionKey}`;
-            if (handleRuleResult(fieldKey, result, context, source, localRow)) {
+            if (handleRuleResult(fieldKey, result, context, source, localRow, { addToContext: false })) {
                 return result; // Still return the kill result for upstream handling
             }
 

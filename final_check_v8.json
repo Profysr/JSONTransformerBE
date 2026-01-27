@@ -1,0 +1,46 @@
+{
+  "nhs_id": "4387740876",
+  "letter_id": "0159604729fb4c5e8d61d5264bf51680",
+  "rpa_note": "Medication",
+  "metrics": [],
+  "letter_codes_list": [
+    {
+      "cTerm": "Screening, monitoring and surveillance",
+      "child": "XaBnr",
+      "codeType": "skip",
+      "comments": "skip",
+      "addStartDate": "false",
+      "startDate": "skip",
+      "addEndDate": "false",
+      "endDate": "skip",
+      "attachProblem": "skip",
+      "createProblem": "skip",
+      "promoteProblem": "skip",
+      "putSummary": "skip",
+      "problemSeverity": "skip"
+    }
+  ],
+  "letter_codes": "XaBnr",
+  "add_readcodes": "true",
+  "letter_type": "skip",
+  "letter_date": false,
+  "hospital_name": "skip",
+  "department": "skip",
+  "action_required": "skip",
+  "safeguarding": "skip",
+  "deceased": "skip",
+  "choose_flag": {
+    "flag_color": "Green",
+    "primaryValue": "true"
+  },
+  "forwardLetter": {
+    "primaryValue": "true",
+    "forwarding_to": "Perscriptions Team",
+    "forwarding_type": "Group"
+  },
+  "medication": "true",
+  "recipient_notes": [
+    "Meds Perscribed / Changes"
+  ],
+  "AddNotesToRecipient": true
+}

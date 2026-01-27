@@ -1,5 +1,6 @@
 
 import logger from "../lib/logger.js";
+import { isUnifiedValue } from "../utils/transformationUtils.js";
 import { resolveDeep, isEmpty } from "../utils/util.js";
 
 export class TransformationContext {
@@ -8,6 +9,16 @@ export class TransformationContext {
         this.candidates = new Map(); // Map<Key, Array<{value, source, isKilled}>>
         this.recipient_notes = [];
         this.killResult = null;
+    }
+
+    /**
+     * Internal truthy check
+     */
+    _isTruthy(val) {
+        if (isEmpty(val)) return false;
+        if (typeof val === "boolean") return val;
+        if (typeof val === "string") return val.toLowerCase() === "true";
+        return Boolean(val);
     }
 
     /**
@@ -42,13 +53,42 @@ export class TransformationContext {
     }
 
     /**
+     * Inspect all candidates currently stored.
+     * Optionally sort them by source.
+     */
+    _viewCandidates(sortBySource = false) {
+        const snapshot = {};
+
+        for (const [key, candidates] of this.candidates.entries()) {
+            let list = candidates.map(c => ({
+                value: c.value,
+                source: c.source,
+                timestamp: new Date(c.timestamp).toISOString()
+            }));
+
+            if (sortBySource) {
+                list.sort((a, b) => a.source.localeCompare(b.source));
+            }
+
+            snapshot[key] = list;
+        }
+
+        return snapshot;
+    }
+
+    /**
      * Get the current "winning" candidate for a key.
-     * Strategy: First Match Wins.
+     * Order: Truthy Unified Value > First Non-Empty > First.
      */
     getCandidate(key) {
         const candidates = this.candidates.get(key);
         if (candidates && candidates.length > 0) {
-            return candidates[0].value;
+            const winner = this._pickWinner(candidates);
+            if (winner) {
+                return (isUnifiedValue(winner.value))
+                    ? winner.value.primaryValue
+                    : winner.value;
+            }
         }
         return undefined;
     }
@@ -80,18 +120,29 @@ export class TransformationContext {
     getSnapshot() {
         const snapshot = {
             recipient_notes: this.recipient_notes,
-            ...Object.fromEntries(
-                Array.from(this.candidates.entries())
-                    .map(([key, list]) => [key, list[0]?.value])
-                    .filter(([_, value]) => !isEmpty(value))
-            )
         };
+
+        for (const [key, candidates] of this.candidates.entries()) {
+            const winner = this._pickWinner(candidates);
+            if (winner && !isEmpty(winner.value)) {
+                const val = (isUnifiedValue(winner.value))
+                    ? winner.value.primaryValue
+                    : winner.value;
+
+                if (!isEmpty(val)) {
+                    snapshot[key] = val;
+                }
+            }
+        }
         return snapshot;
     }
 
     /**
      * Resolve all candidates to the final output object.
-     * Strategy: First Candidate Wins (Index 0).
+     * Strategy:
+     * 1. Find the "best" candidate for the field.
+     * 2. If it's a unified value, extract primary and dependents.
+     * 3. Favor truthy primary values over falsy ones.
      */
     getFinalOutput() {
         if (this.killResult) {
@@ -100,48 +151,35 @@ export class TransformationContext {
 
         const output = {};
 
-        // STRATEGY: First Candidate Wins (Index 0).
         for (const [key, candidates] of this.candidates.entries()) {
-            if (candidates.length > 0) {
-                // STRATEGY: First Match Wins
-                const winner = candidates[0];
+            const winner = this._pickWinner(candidates);
+            if (winner) {
                 output[key] = winner.value;
-
-                if (candidates.length > 1) {
-                    logger.info(`[Context] '${key}' had ${candidates.length} candidates. Selected first: ${JSON.stringify(winner.value)}`);
-                }
             }
         }
 
-        // Ensure default empty collections for specific transformed fields if they were not populated
-        if (!output.hasOwnProperty("metrics")) {
-            output["metrics"] = [];
-        }
-        if (!output.hasOwnProperty("letter_codes_list")) {
-            output["letter_codes_list"] = [];
-        }
-        if (!output.hasOwnProperty("letter_codes")) {
-            output["letter_codes"] = "";
-        }
+        ["metrics", "letter_codes_list", "letter_codes"].forEach(field => {
+            if (!output.hasOwnProperty(field)) {
+                output[field] = field === "letter_codes" ? "" : [];
+            }
+        });
 
-        // Append recipient_notes if any
-        if (this.recipient_notes.length > 0) {
-            output["recipient_notes"] = this.recipient_notes;
-            output["AddNotesToRecipient"] = true;
-        } else {
-            output["AddNotesToRecipient"] = false;
-        }
+        output["recipient_notes"] = this.recipient_notes;
+        output["AddNotesToRecipient"] = this.recipient_notes.length > 0;
 
         const finalOutput = { ...this.originalInput, ...output };
-
-
-        // Clean up: Remove any fields that are empty (null, undefined, or empty string)
-        for (const key of Object.keys(finalOutput)) {
-            if (isEmpty(finalOutput[key])) {
-                finalOutput[key] = "skip";
-            }
-        }
-
+        Object.keys(finalOutput).forEach(key => {
+            if (isEmpty(finalOutput[key])) finalOutput[key] = "skip";
+        });
         return finalOutput;
+    }
+
+    _pickWinner(candidates = []) {
+        if (candidates && candidates.length == 0) return null;
+
+        return (candidates.find(c => isUnifiedValue(c.value) && this._isTruthy(c.value.primaryValue)) ||
+            candidates.find(c => !isUnifiedValue(c.value) && this._isTruthy(c.value)) ||
+            candidates.find(c => !isEmpty(c.value) && c.value !== "skip") ||
+            candidates[0] || null);
     }
 }

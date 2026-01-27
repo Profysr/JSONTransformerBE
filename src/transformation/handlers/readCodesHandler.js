@@ -160,7 +160,7 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys, context) =>
     );
 
     const source = `readCode:${childCode}`;
-    if (handleRuleResult(key, result, context, source, codeObj)) {
+    if (handleRuleResult(key, result, context, source, codeObj, { addToContext: false })) {
       return {
         ...result,
         isKilled: true,
@@ -204,7 +204,7 @@ export const processReadCodes = (inputData, rules, context) => {
   }
 
   if (
-isKilled(useExistingReadCodes)
+    isKilled(useExistingReadCodes)
   ) {
     logger.warn(`[ReadCodes] add_readcodes toggle triggered KILL`);
     context.setKilled({

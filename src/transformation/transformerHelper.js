@@ -48,9 +48,10 @@ export const transformerHelper = (inputData, configRules) => {
 
     // 2. Resolve Final Output
     const finalOutput = context.getFinalOutput();
-
+    const candidates = context._viewCandidates(true);
     const totalDuration = Date.now() - startTime;
     logger.info(`Data transformation completed successfully in ${totalDuration}ms`);
 
+    logger.info(`Candidates: ${JSON.stringify(candidates)}`);
     return finalOutput;
 };

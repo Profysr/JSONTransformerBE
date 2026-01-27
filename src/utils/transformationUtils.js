@@ -1,4 +1,4 @@
-import { toBoolean, isEmpty } from "./util.js";
+import { toBoolean, isEmpty, resolveDeep } from "./util.js";
 import logger from "../lib/logger.js";
 
 export const sectionKeys = ["general", "letter_type_rule", "exception_json", "e2e_config_json", "metrics_config_rules", "assignment_rules"]
@@ -45,29 +45,41 @@ export const isTruthy = (value) => {
 /**
  * Unpacks a unified value and processes its dependents if the primary value is truthy.
  */
-export const processUnifiedValue = (fieldKey, unifiedObj, context, source, localTarget = null) => {
+export const processUnifiedValue = (fieldKey, unifiedObj, context, source, localTarget = null, options = {}) => {
+    const { addToContext = true } = options;
     const { primaryValue, ...dependents } = unifiedObj;
 
     // 1. Add/Set the primaryValue for the parent field (as property name)
-    if (context) {
-        context.addCandidate(fieldKey, primaryValue, source);
+    // NEW: We store the ENTIRE unifiedObj in the context as a candidate for this key
+    if (addToContext && context) {
+        let contextObj = unifiedObj;
+
+        // USER REQUIREMENT: If parent is falsy, set dependents to 'skip'
+        if (!isTruthy(primaryValue)) {
+            const skippedDependents = Object.fromEntries(
+                Object.keys(dependents).map(k => [k, "skip"])
+            );
+            contextObj = { primaryValue, ...skippedDependents };
+        }
+
+        context.addCandidate(fieldKey, contextObj, source);
     }
+
     if (localTarget) {
         localTarget[fieldKey] = primaryValue;
     }
 
     const isWinnerTruthy = isTruthy(primaryValue);
 
-    // 2. Process dependent fields as separate top-level fields
+    // 2. Process dependent fields locally (for the row)
     for (const [depKey, depValue] of Object.entries(dependents)) {
-        // If primary is true, use actual depValue. If primary is false, use "skip"
-        const finalDepValue = isWinnerTruthy ? depValue : "skip";
+        let finalDepValue = isWinnerTruthy ? depValue : "skip";
 
-        if (context) {
-            context.addCandidate(depKey, finalDepValue, `dependent:${fieldKey}`);
-        }
-
+        // Resolve variables in dependent values (e.g. var(read_code_date))
         if (localTarget) {
+            if (isWinnerTruthy) {
+                finalDepValue = resolveDeep(depValue, context?.originalInput || {}, localTarget, depKey, context);
+            }
             localTarget[depKey] = finalDepValue;
             logger.info(`[${fieldKey}] Set dependent locally: ${depKey} = ${JSON.stringify(finalDepValue)}`);
         }
@@ -93,7 +105,8 @@ export const isKilled = (value) => {
  *
  * @returns {boolean} - Returns true if the transformation was killed.
  */
-export const handleRuleResult = (fieldKey, result, context, source, localTarget = null) => {
+export const handleRuleResult = (fieldKey, result, context, source, localTarget = null, options = {}) => {
+    const { addToContext = true } = options;
     // 1. Check Kill Signal
     if (isKilled(result)) {
         if (context) {
@@ -108,7 +121,7 @@ export const handleRuleResult = (fieldKey, result, context, source, localTarget 
 
     // If result is null/undefined/simple, just add it and return
     if (result === null || typeof result !== "object") {
-        if (context) context.addCandidate(fieldKey, result, source);
+        if (addToContext && context) context.addCandidate(fieldKey, result, source);
         if (localTarget) localTarget[fieldKey] = result;
         return false;
     }
@@ -122,7 +135,8 @@ export const handleRuleResult = (fieldKey, result, context, source, localTarget 
     if (result.matrixAssignments && typeof result.matrixAssignments === "object") {
         for (const [k, v] of Object.entries(result.matrixAssignments)) {
             if (isUnifiedValue(v)) {
-                processUnifiedValue(k, v, context, `matrix:${fieldKey}`, localTarget);
+                // For Matrix Assignments, we ALWAYS want them in the context
+                processUnifiedValue(k, v, context, `matrix:${fieldKey}`, localTarget, { addToContext: true });
             } else {
                 if (context) context.addCandidate(k, v, `matrix:${fieldKey}`);
                 if (localTarget) localTarget[k] = v;
@@ -135,9 +149,9 @@ export const handleRuleResult = (fieldKey, result, context, source, localTarget 
     const finalValue = result.hasOwnProperty("value") ? result.value : result;
 
     if (isUnifiedValue(finalValue)) {
-        processUnifiedValue(fieldKey, finalValue, context, source, localTarget);
+        processUnifiedValue(fieldKey, finalValue, context, source, localTarget, { addToContext });
     } else {
-        if (context) context.addCandidate(fieldKey, finalValue, source);
+        if (addToContext && context) context.addCandidate(fieldKey, finalValue, source);
         if (localTarget) localTarget[fieldKey] = finalValue;
     }
 
