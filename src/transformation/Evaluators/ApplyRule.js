@@ -9,7 +9,7 @@ import { evaluateCascadingAdvanced } from "./EvaluateRule.js";
  * 3. Variable mapping
  * 4. Advanced logic
  */
-export const applyRule = (inputData, fieldValue, fieldKey, localContext = {}) => {
+export const applyRule = (inputData, fieldValue, fieldKey, localContext = {}, context = null) => {
 
     // 1. Check if the fieldValue is configured through advanced logic
     if (
@@ -17,7 +17,7 @@ export const applyRule = (inputData, fieldValue, fieldKey, localContext = {}) =>
         fieldValue !== null &&
         fieldValue.type === "cascading-advanced"
     ) {
-        const result = evaluateCascadingAdvanced(inputData, fieldValue, fieldKey, localContext);
+        const result = evaluateCascadingAdvanced(inputData, fieldValue, fieldKey, localContext, context);
 
         if (result.isKilled) {
             logger.warn(`[${fieldKey}] Rule resulted in KILL. Value: ${result.value}`);
@@ -28,7 +28,7 @@ export const applyRule = (inputData, fieldValue, fieldKey, localContext = {}) =>
 
     // 2. Check if the fieldValue is a variable
     if (typeof fieldValue === "string" && fieldValue.includes("var(")) {
-        return resolveVariable(fieldValue, inputData, localContext, fieldKey);
+        return resolveVariable(fieldValue, inputData, localContext, fieldKey, context);
     }
 
     // 3. Static assignment for Field

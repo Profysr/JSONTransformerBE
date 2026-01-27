@@ -16,6 +16,7 @@ export const fetchConfigRules = async (inst_id, letter_type) => {
     letter_type: letter_type,
   };
 
+
   try {
     const result = await makeRequestWithRetry(
       () => getAccessToken("shary_prod"),
@@ -101,6 +102,9 @@ export const processTransformation = catchAsyncHandler(
           )
         );
       }
+
+      console.log("Config Rules: ", configRules);
+      return
 
       /** pass the inputData and rules to transformData function */
       const output = transformerHelper(inputData, configRules);

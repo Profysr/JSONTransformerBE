@@ -30,7 +30,7 @@ export class TransformationContext {
         }
 
         // Resolve variables recursively
-        const resolvedValue = resolveDeep(value, this.originalInput, {}, key);
+        const resolvedValue = resolveDeep(value, this.originalInput, {}, key, this);
 
         this.candidates.get(key).push({
             value: resolvedValue,
@@ -74,6 +74,22 @@ export class TransformationContext {
     }
 
     /**
+     * Returns a snapshot of the current state for context resolution.
+     * Contains all "winner" candidates and the notes array.
+     */
+    getSnapshot() {
+        const snapshot = {
+            notes: this.notes,
+            ...Object.fromEntries(
+                Array.from(this.candidates.entries())
+                    .map(([key, list]) => [key, list[0]?.value])
+                    .filter(([_, value]) => isEmpty(value))
+            )
+        };
+        return snapshot;
+    }
+
+    /**
      * Resolve all candidates to the final output object.
      * Strategy: First Candidate Wins (Index 0).
      */
@@ -98,14 +114,14 @@ export class TransformationContext {
         }
 
         // Ensure default empty collections for specific transformed fields if they were not populated
-        if (!output.hasOwnProperty("transformed_metrics")) {
-            output["transformed_metrics"] = [];
+        if (!output.hasOwnProperty("metrics")) {
+            output["metrics"] = [];
         }
-        if (!output.hasOwnProperty("transformed_letter_codes_list")) {
-            output["transformed_letter_codes_list"] = [];
+        if (!output.hasOwnProperty("letter_codes_list")) {
+            output["letter_codes_list"] = [];
         }
-        if (!output.hasOwnProperty("transformed_letter_codes")) {
-            output["transformed_letter_codes"] = "";
+        if (!output.hasOwnProperty("letter_codes")) {
+            output["letter_codes"] = "";
         }
 
         // Append Notes if any
@@ -118,18 +134,14 @@ export class TransformationContext {
 
         const finalOutput = { ...this.originalInput, ...output };
 
-        
+
         // Clean up: Remove any fields that are empty (null, undefined, or empty string)
         for (const key of Object.keys(finalOutput)) {
             if (isEmpty(finalOutput[key])) {
                 finalOutput[key] = "skip";
             }
         }
-        // Remove old field names as we have "updated" them to transformed_* versions
-        delete finalOutput.metrics;
-        delete finalOutput.letter_codes;
-        delete finalOutput.letter_codes_list;
-        
+
         return finalOutput;
     }
 }

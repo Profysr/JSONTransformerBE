@@ -24,7 +24,7 @@ const initializeCodesMap = (existingList) => {
 };
 
 // Build code object with explicit field mapping using Template Engine
-const buildCodeObj = (codeContext, rules) => {
+const buildCodeObj = (codeContext, rules, context) => {
   // Standard ReadCodes Template
   const defaultTemplate = {
     /** General Fields */
@@ -92,7 +92,7 @@ const buildCodeObj = (codeContext, rules) => {
     },
   };
 
-  const result = applyTemplate(defaultTemplate, codeContext);
+  const result = applyTemplate(defaultTemplate, codeContext, context);
   return result;
 };
 
@@ -112,7 +112,7 @@ const applyForcedMappings = (codesMap, mappings) => {
 };
 
 // Extract global rules that apply to all codes
-const extractGlobalRules = (inputData, rules) => {
+const extractGlobalRules = (inputData, rules, context) => {
   const globalRuleKeys = [
     "use_inactive",
     "override_bilateral",
@@ -122,7 +122,7 @@ const extractGlobalRules = (inputData, rules) => {
 
   globalRuleKeys.forEach((key) => {
     if (rules[key] !== undefined) {
-      globalRules[key] = applyRule(inputData, rules[key], key);
+      globalRules[key] = applyRule(inputData, rules[key], key, {}, context);
     }
   });
 
@@ -130,7 +130,7 @@ const extractGlobalRules = (inputData, rules) => {
 };
 
 // Apply configuration rules to each code object
-const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys) => {
+const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys, context) => {
   const childCode = codeObj.child;
 
   for (const key of Object.keys(rules)) {
@@ -160,6 +160,7 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys) => {
       ruleConfig,
       contextualFieldKey,
       codeObj,
+      context,
     );
 
     // Handle KILL scenario
@@ -198,6 +199,8 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys) => {
             inputData,
             codeObj,
             `matrix:${childCode}`,
+            false,
+            context
           );
           codeObj[mKey] = resolvedMVal;
           logger.info(
@@ -244,6 +247,8 @@ export const processReadCodes = (inputData, rules, context) => {
       inputData,
       rules.add_readcodes,
       "add_readcodes",
+      {},
+      context
     );
   } else {
     logger.info(
@@ -287,7 +292,6 @@ export const processReadCodes = (inputData, rules, context) => {
   const pendingForcedMappings = [];
 
   // Step 3: Process specific_codes table
-  // REQUIREMENT 3: Merge/Override codes defined in the 'specific_codes' table.
   if (rules.specific_codes) {
     logger.info(`[ReadCodes] Processing specific_codes table...`);
 
@@ -297,7 +301,6 @@ export const processReadCodes = (inputData, rules, context) => {
       identifierKey: "child",
       context, // Pass context
       onRowSkip: (row) => {
-        // if the code is present already, we remove it
         const childCode = row.child;
         if (childCode && codesMap.has(childCode)) {
           logger.info(
@@ -366,7 +369,7 @@ export const processReadCodes = (inputData, rules, context) => {
   const entries = Array.from(codesMap.entries());
 
   for (const [childCode, codeObj] of entries) {
-    const result = applyRulesToCode(inputData, codeObj, rules, globalRuleKeys);
+    const result = applyRulesToCode(inputData, codeObj, rules, globalRuleKeys, context);
 
     if (result && result.isKilled) {
       context.setKilled(result);
@@ -383,10 +386,10 @@ export const processReadCodes = (inputData, rules, context) => {
   }
 
   // Step 6: Extract global rules and build final output
-  const globalRules = extractGlobalRules(inputData, rules);
+  const globalRules = extractGlobalRules(inputData, rules, context);
   logger.info(`[ReadCodes] Building final output...`);
   const finalCodes = Array.from(codesMap.values()).map((code) =>
-    buildCodeObj({ ...code, ...globalRules }, rules),
+    buildCodeObj({ ...code, ...globalRules }, rules, context),
   );
 
   // Add global rules onto the root level of inputData
@@ -399,12 +402,12 @@ export const processReadCodes = (inputData, rules, context) => {
   // Step 8: Update inputData with transformed codes
   // Add to context candidates (Always add even if empty)
   context.addCandidate(
-    "transformed_letter_codes_list",
+    "letter_codes_list",
     finalCodes || [],
     "section:readCodes",
   );
   context.addCandidate(
-    "transformed_letter_codes",
+    "letter_codes",
     (finalCodes || []).map((c) => c.child).join(", ") || "",
     "section:readCodes",
   );

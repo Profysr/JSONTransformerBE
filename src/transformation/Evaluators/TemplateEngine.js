@@ -7,12 +7,12 @@ import { isEmpty } from "../../utils/util.js";
  * Helper: Recursively evaluate conditions (logical groups or operator rules)
  * This handles string expressions, logical groups (AND/OR), and single operator rules.
  */
-const evaluateTemplateCondition = (condition, context, ruleKey = "Global") => {
+const evaluateTemplateCondition = (condition, rowData, ruleKey = "Global", context = null) => {
     if (!condition) return true;
 
     // 1. Handle Array (Default AND logic)
     if (Array.isArray(condition)) {
-        return condition.every(c => evaluateTemplateCondition(c, context, ruleKey));
+        return condition.every(c => evaluateTemplateCondition(c, rowData, ruleKey, context));
     }
 
     const type = typeof condition;
@@ -22,7 +22,7 @@ const evaluateTemplateCondition = (condition, context, ruleKey = "Global") => {
         try {
             // Provide 'context' and 'ctx' as aliases for the context object
             const func = new Function("context", "ctx", `with(context) { return ${condition}; }`);
-            return func(context, context);
+            return func(rowData, rowData);
         } catch (error) {
             logger.warn(`[TemplateEngine][${ruleKey}] Condition evaluation failed: "${condition}". Error: ${error.message}`);
             return false;
@@ -37,13 +37,13 @@ const evaluateTemplateCondition = (condition, context, ruleKey = "Global") => {
         if (logic) {
             const list = rules || [];
             return logic === "OR"
-                ? list.some(r => evaluateTemplateCondition(r, context, ruleKey))
-                : list.every(r => evaluateTemplateCondition(r, context, ruleKey));
+                ? list.some(r => evaluateTemplateCondition(r, rowData, ruleKey, context))
+                : list.every(r => evaluateTemplateCondition(r, rowData, ruleKey, context));
         }
 
         // Case B: Operator Rule { field: "...", operator: "...", value: "..." }
         if (field && operator) {
-            return evaluateSingleCondition(context, condition, ruleKey);
+            return evaluateSingleCondition(null, condition, ruleKey, rowData, context);
         }
     }
 
@@ -80,7 +80,7 @@ const applyTransforms = (value, transforms, context) => {
  * Main entry point: Apply a template object to a context
  * This recursively builds the output object based on the template.
  */
-export const applyTemplate = (template, context) => {
+export const applyTemplate = (template, rowData, context = null) => {
     if (!template || typeof template !== "object") {
         throw new Error('Output Template must be an object for collections and tables.');
     }
@@ -90,7 +90,7 @@ export const applyTemplate = (template, context) => {
     for (const [key, config] of Object.entries(template)) {
         // 1. Handle Conditional logic if present (supports string or object conditions)
         if (typeof config === "object" && config !== null && config.condition) {
-            const isConditionMet = evaluateTemplateCondition(config.condition, context, key);
+            const isConditionMet = evaluateTemplateCondition(config.condition, rowData, key, context);
             if (!isConditionMet) {
                 result[key] = "skip";
                 continue;
@@ -103,11 +103,11 @@ export const applyTemplate = (template, context) => {
         if (typeof config === "object" && config !== null) {
             // Case A: Explicit field mapping { field: "source_key", transform: "..." }
             if (config.field) {
-                value = context[config.field];
+                value = rowData[config.field];
 
                 // Apply transforms if defined
                 if (config.transform) {
-                    value = applyTransforms(value, config.transform, context);
+                    value = applyTransforms(value, config.transform, rowData);
                 }
             }
             // Case B: Literal value { value: "static_val" }
@@ -117,7 +117,7 @@ export const applyTemplate = (template, context) => {
             // Case C: Nested Template (Recursive application)
             else if (!config.condition || Object.keys(config).length > 1) {
                 if (!config.field && config.value === undefined) {
-                    value = applyTemplate(config, context);
+                    value = applyTemplate(config, rowData, context);
                 }
             }
         }

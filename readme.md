@@ -37,12 +37,15 @@ If a string matches the `var(...)` syntax, it is treated as an **Explicit Path**
 
 ### B. Implicit Paths (Auto-Resolution)
 If a string is *not* wrapped in `var()`, the engine treats it as an **Implicit Path** first.
-- **Process**: Using `getValue` from `Operators.js`, the engine splits the string by `.` and tries to traverse the input data.
-- **Example**: `metrics.0.value` will automatically navigate the array and objects to find the value.
+- **Process**: Using `getValue` from `Operators.js`, the engine splits the string by `.` and tries to traverse the data.
+- **Lookup Order**:
+    1.  **Input Data**: The original input provided to the transformation.
+    2.  **Global Context**: A snapshot of current "winning" candidates and the `notes` array.
+- **Example**: `metrics.0.value` will automatically navigate the array and objects to find the value. `notes` will resolve to the current global notes array.
 
 ### C. Literals: Constants
 The system distinguishes between finding a data point and using a fixed string.
-- **Process**: If a path *cannot* be resolved in the data, the system checks if it was intended as a literal.
+- **Process**: If a path *cannot* be resolved in any data source (Input or Global Context), the system treats it as a literal.
 - **Behavior**:
     - For the **Field** (left side of condition): If the path isn't found, it returns `false` (skipping condition).
     - For the **Value** (right side of condition): If the path isn't found, it treats the string as a **Literal Constant**.

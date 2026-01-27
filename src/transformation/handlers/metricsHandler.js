@@ -7,7 +7,7 @@ import { applyTemplate } from "../Evaluators/TemplateEngine.js";
 // ============================================
 
 // Split Blood Pressure into systolic and diastolic items
-const splitBP = (metricName, rawValue, codes, row, rules) => {
+const splitBP = (metricName, rawValue, codes, row, rules, context) => {
     logger.info(`[Metrics][${metricName}] Splitting BP into systolic/diastolic...`);
 
     const values = String(rawValue).split("/");
@@ -28,13 +28,13 @@ const splitBP = (metricName, rawValue, codes, row, rules) => {
     };
 
     return [
-        createMetricObj(systolicContext, rules),
-        createMetricObj(diastolicContext, rules)
+        createMetricObj(systolicContext, rules, context),
+        createMetricObj(diastolicContext, rules, context)
     ];
 };
 
 // Build metric object with explicit field mapping
-const createMetricObj = (rowContext, rules) => {
+const createMetricObj = (rowContext, rules, context) => {
     // Standard Metrics Template
     const defaultTemplate = {
         cTerm: { field: "metricName" },
@@ -57,7 +57,7 @@ const createMetricObj = (rowContext, rules) => {
         // }, {})
     };
 
-    const result = applyTemplate(defaultTemplate, rowContext);
+    const result = applyTemplate(defaultTemplate, rowContext, context);
     return result;
 };
 
@@ -123,16 +123,19 @@ export const processMetrics = (inputData, rules, context) => {
                 date_type: row.date_type
             };
 
+            // Note: TemplateEngine currently uses its own evaluateTemplateCondition
+            // which doesn't take contextInstance yet. We might need to update it as well.
+
             // Check if this is a Blood Pressure metric
             const isBP = ["blood_pressure", "bp"].includes(metricName.toLowerCase());
 
             if (isBP) {
                 // Return array of two items (systolic + diastolic)
-                return splitBP(metricName, rawValue, row.metric_codes, row, rules);
+                return splitBP(metricName, rawValue, row.metric_codes, row, rules, context);
             } else {
                 // Return single metric item
                 logger.info(`[Metrics][${metricName}] Processing with value: ${rawValue}`);
-                return createMetricObj(rowContext, rules);
+                return createMetricObj(rowContext, rules, context);
             }
         }
     });
@@ -144,6 +147,6 @@ export const processMetrics = (inputData, rules, context) => {
     }
 
     // Add to Context Candidates (Always add even if empty as per requirement)
-    context.addCandidate("transformed_metrics", results || [], "section:metrics");
+    context.addCandidate("metrics", results || [], "section:metrics");
     logger.info(`[Metrics] Added ${results?.length || 0} metrics to candidates.`);
 };

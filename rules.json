@@ -1,0 +1,743 @@
+[
+    {
+        "id": 141,
+        "letter_type": "Ophthalmology",
+        "letter_type_rule": {
+            "title": "Letter Type Configuration",
+            "fields": [
+                {
+                    "id": "letter_type",
+                    "value": {
+                        "else": {
+                            "value": "var(letter_type) ",
+                            "isKilled": false,
+                            "batch_name": "",
+                            "recipient_notes": "",
+                            "matrixAssignments": {}
+                        },
+                        "type": "cascading-advanced",
+                        "clauses": [
+                            {
+                                "rules": [
+                                    {
+                                        "id": "dd7c1a4f-5273-48b8-a7e8-54434c975877",
+                                        "type": "condition",
+                                        "field": "hospital_name",
+                                        "value": "York",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    }
+                                ],
+                                "outcome": {
+                                    "value": "York Letter type",
+                                    "isKilled": false,
+                                    "batch_name": "",
+                                    "recipient_notes": "",
+                                    "matrixAssignments": {}
+                                },
+                                "rootLogicType": "AND"
+                            }
+                        ]
+                    },
+                    "isSkip": false,
+                    "isActive": true,
+                    "helperText": "If you want to remap letter-type name, Enter new name? (Optional). e.g: map 'A&E' into 'Accident and Emergency'"
+                },
+                {
+                    "id": "letter_date",
+                    "value": "var(incident_date) ",
+                    "isSkip": false,
+                    "isActive": true,
+                    "helperText": "Select the field that holds the letter date. This field supports referencing JSON fields."
+                },
+                {
+                    "id": "hospital_name",
+                    "value": "var(hospital_name) ",
+                    "isSkip": false,
+                    "isActive": true,
+                    "helperText": "Enter the default hospital name."
+                },
+                {
+                    "id": "department",
+                    "value": "var(department) ",
+                    "isSkip": false,
+                    "isActive": true,
+                    "helperText": "Enter the default department name."
+                }
+            ],
+            "sectionKey": "letter_type_rule",
+            "isCollapsed": false
+        },
+        "exception_json": {
+            "title": "Exception Checks",
+            "fields": [
+                {
+                    "id": "action_required",
+                    "value": {
+                        "else": {
+                            "value": "",
+                            "isKilled": false,
+                            "batch_name": "",
+                            "recipient_notes": "",
+                            "matrixAssignments": {}
+                        },
+                        "type": "cascading-advanced",
+                        "clauses": [
+                            {
+                                "rules": [
+                                    {
+                                        "id": "11b66f4a-e19b-4850-82f6-7fc6e9b94f81",
+                                        "type": "condition",
+                                        "field": "var(rpa_note)",
+                                        "value": "Action Required",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    }
+                                ],
+                                "outcome": {
+                                    "value": "skip",
+                                    "isKilled": false,
+                                    "batch_name": "",
+                                    "recipient_notes": "GP Action Required",
+                                    "matrixAssignments": {}
+                                },
+                                "rootLogicType": "AND"
+                            }
+                        ]
+                    },
+                    "isSkip": false,
+                    "isActive": true,
+                    "helperText": "If you want to flag letters on Action Required, specify the batch name, else write down notes for recipient e.g. 'GP Action Required'"
+                },
+                {
+                    "id": "safeguarding",
+                    "value": {
+                        "else": {
+                            "value": "",
+                            "isKilled": false,
+                            "batch_name": "",
+                            "recipient_notes": "",
+                            "matrixAssignments": {}
+                        },
+                        "type": "cascading-advanced",
+                        "clauses": [
+                            {
+                                "rules": [
+                                    {
+                                        "id": "fa2337df-53e5-48ae-89bc-854fc163a399",
+                                        "type": "condition",
+                                        "field": "var(rpa_note)",
+                                        "value": "Safeguarding",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    }
+                                ],
+                                "outcome": {
+                                    "value": "skip",
+                                    "isKilled": false,
+                                    "batch_name": "",
+                                    "recipient_notes": "Safeguarding Concerns Detected",
+                                    "matrixAssignments": {}
+                                },
+                                "rootLogicType": "AND"
+                            }
+                        ]
+                    },
+                    "isSkip": false,
+                    "isActive": true,
+                    "helperText": "Specify details or routing instructions for safeguarding alerts."
+                },
+                {
+                    "id": "deceased",
+                    "value": {
+                        "else": {
+                            "value": "",
+                            "isKilled": false,
+                            "batch_name": "",
+                            "recipient_notes": "",
+                            "matrixAssignments": {}
+                        },
+                        "type": "cascading-advanced",
+                        "clauses": [
+                            {
+                                "rules": [
+                                    {
+                                        "id": "ed9065fe-7f8a-443d-88f0-e76e46db7d1d",
+                                        "type": "condition",
+                                        "field": "var(rpa_note)",
+                                        "value": "Deceased",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    },
+                                    {
+                                        "id": "3c5e5d95-dc2c-414a-9536-c9d4d27a4396",
+                                        "type": "condition",
+                                        "field": "var(deceased)",
+                                        "value": "true",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    }
+                                ],
+                                "outcome": {
+                                    "value": "skip",
+                                    "isKilled": true,
+                                    "batch_name": "Practice to Review - Urgent",
+                                    "recipient_notes": "",
+                                    "matrixAssignments": {}
+                                },
+                                "rootLogicType": "OR"
+                            },
+                            {
+                                "rules": [
+                                    {
+                                        "id": "2f3509d1-f0ac-45bb-a5d8-3c2db795c64d",
+                                        "type": "condition",
+                                        "field": "var(rpa_note)",
+                                        "value": "Deducted",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    },
+                                    {
+                                        "id": "c17cdd27-6607-462e-892b-a1f7f448814f",
+                                        "type": "condition",
+                                        "field": "var(deducted)",
+                                        "value": "true",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    }
+                                ],
+                                "outcome": {
+                                    "value": "skip",
+                                    "isKilled": true,
+                                    "batch_name": "Practice to Review - Non Urgent",
+                                    "recipient_notes": "",
+                                    "matrixAssignments": {}
+                                },
+                                "rootLogicType": "AND"
+                            }
+                        ]
+                    },
+                    "isSkip": false,
+                    "isActive": true,
+                    "helperText": "Specify the conditions for deceased or deducted patients."
+                },
+                {
+                    "id": "medication",
+                    "label": "Medication",
+                    "value": {
+                        "else": {
+                            "value": "",
+                            "isKilled": false,
+                            "batch_name": "",
+                            "recipient_notes": "",
+                            "matrixAssignments": {
+                                "choose_flag": {
+                                    "flag_color": "",
+                                    "primaryValue": "false"
+                                },
+                                "forwardLetter": {
+                                    "primaryValue": "false",
+                                    "forwarding_to": "",
+                                    "forwarding_type": ""
+                                }
+                            }
+                        },
+                        "type": "cascading-advanced",
+                        "clauses": [
+                            {
+                                "rules": [
+                                    {
+                                        "id": "e42e2f5b-ee20-452d-bec6-f2fb6a2afb18",
+                                        "type": "condition",
+                                        "field": "var(rpa_note)",
+                                        "value": "Medication",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    },
+                                    {
+                                        "id": "e30e2df0-58dc-4e38-99a6-68a70debc79b",
+                                        "type": "condition",
+                                        "field": "var(rpa_note)",
+                                        "value": "Medicine",
+                                        "operator": "contains",
+                                        "caseSensitive": false
+                                    }
+                                ],
+                                "outcome": {
+                                    "value": "skip",
+                                    "isKilled": false,
+                                    "batch_name": "",
+                                    "recipient_notes": "Meds Perscribed / Changes",
+                                    "matrixAssignments": {
+                                        "choose_flag": {
+                                            "flag_color": "Green",
+                                            "primaryValue": "true"
+                                        },
+                                        "forwardLetter": {
+                                            "primaryValue": "true",
+                                            "forwarding_to": "Perscriptions Team",
+                                            "forwarding_type": "Group"
+                                        }
+                                    }
+                                },
+                                "rootLogicType": "OR"
+                            }
+                        ]
+                    },
+                    "isActive": true
+                }
+            ],
+            "sectionKey": "exception_json",
+            "isCollapsed": false
+        },
+        "e2e_config_json": {
+            "title": "E2E Read Codes",
+            "fields": [
+                {
+                    "id": "add_readcodes",
+                    "type": "boolean",
+                    "value": "true",
+                    "isSkip": false,
+                    "isActive": true,
+                    "helperText": "Do you want to add read codes, defined in the tool? If No, then you can define your default codes in the table below"
+                },
+                {
+                    "id": "add_date",
+                    "type": "boolean",
+                    "value": {
+                        "else": {
+                            "value": "false",
+                            "isKilled": false,
+                            "batch_name": "",
+                            "recipient_notes": "",
+                            "matrixAssignments": {}
+                        },
+                        "type": "cascading-advanced",
+                        "clauses": [
+                            {
+                                "rules": [
+                                    {
+                                        "id": "4c3d80b7-6755-43e3-9351-757c3ccf3a2e",
+                                        "type": "condition",
+                                        "field": "var(read_code_date)",
+                                        "value": "",
+                                        "operator": "is_not_empty",
+                                        "caseSensitive": false
+                                    }
+                                ],
+                                "outcome": {
+                                    "value": {
+                                        "date_type": "var(read_code_date)",
+                                        "primaryValue": "true"
+                                    },
+                                    "isKilled": false,
+                                    "batch_name": "",
+                                    "recipient_notes": "",
+                                    "matrixAssignments": {}
+                                },
+                                "rootLogicType": "AND"
+                            }
+                        ]
+                    },
+                    "isSkip": false,
+                    "isActive": true,
+                    "dependents": [
+                        {
+                            "id": "date_type",
+                            "type": "dropdown",
+                            "value": "",
+                            "options": [
+                                {
+                                    "id": "letter_date",
+                                    "label": "Letter Date",
+                                    "jsonField": true
+                                },
+                                {
+                                    "id": "read_code_date",
+                                    "label": "Read Code Date",
+                                    "jsonField": true
+                                }
+                            ],
+                            "helperText": "Specify the default date type for read code. Do you want to use letter date or associated read code date?"
+                        }
+                    ],
+                    "helperText": "Do you want to add date with read codes? "
+                },
+                {
+                    "id": "specific_codes",
+                    "type": "table",
+                    "value": [
+                        {
+                            "id": 3,
+                            "child": "XaBnr",
+                            "c_term": "Screening, monitoring and surveillance",
+                            "addCode": true,
+                            "add_date": false,
+                            "code_type": "",
+                            "put_summary": "",
+                            "forcedMappings": "",
+                            "promote_problem": "",
+                            "problem_severity": ""
+                        }
+                    ],
+                    "isSkip": false,
+                    "columns": [
+                        {
+                            "key": "child",
+                            "type": "input",
+                            "label": "Child Code",
+                            "canConditional": true
+                        },
+                        {
+                            "key": "addCode",
+                            "type": "boolean",
+                            "label": "Add Code?",
+                            "parentField": true,
+                            "canConditional": true
+                        },
+                        {
+                            "key": "code_type",
+                            "type": "dropdown",
+                            "label": "Code Type",
+                            "options": [
+                                "Null",
+                                "Procedure",
+                                "Diagnosis"
+                            ],
+                            "canConditional": true
+                        },
+                        {
+                            "key": "add_date",
+                            "type": "boolean",
+                            "label": "Add Date?",
+                            "canConditional": true
+                        },
+                        {
+                            "key": "promote_problem",
+                            "type": "dropdown",
+                            "label": "Promote Problem",
+                            "options": [
+                                "skip",
+                                "Promote to problem",
+                                "Promote to inactive problem"
+                            ],
+                            "canConditional": true
+                        },
+                        {
+                            "key": "put_summary",
+                            "type": "dropdown",
+                            "label": "Put Summary",
+                            "options": [
+                                "skip",
+                                "Put in the summary",
+                                "Put in the inactive summary"
+                            ],
+                            "canConditional": true
+                        },
+                        {
+                            "key": "problem_severity",
+                            "type": "dropdown",
+                            "label": "Problem Severity",
+                            "options": [
+                                "skip",
+                                "Minor",
+                                "Major"
+                            ],
+                            "canConditional": true
+                        },
+                        {
+                            "key": "forcedMappings",
+                            "type": "logic",
+                            "label": "Forced Mappings",
+                            "canConditional": true
+                        }
+                    ],
+                    "isActive": true,
+                    "helperText": "Search and manage specific codes, their behaviours, and forced mappings. Define conditions for each code.",
+                    "usePagination": true
+                }
+            ],
+            "sectionKey": "e2e_config_json",
+            "isCollapsed": false
+        },
+        "metrics_config_rules": {
+            "title": "Metrics",
+            "fields": [
+                {
+                    "id": "metrics_list",
+                    "type": "table",
+                    "value": [
+                        {
+                            "id": "blood_pressure",
+                            "metric": "blood_pressure",
+                            "add_date": false,
+                            "date_type": "",
+                            "add_metric": true,
+                            "metric_codes": "2469/246A."
+                        },
+                        {
+                            "id": "weight",
+                            "metric": "weight",
+                            "add_date": {
+                                "else": {
+                                    "value": "false",
+                                    "isKilled": false,
+                                    "batch_name": "",
+                                    "recipient_notes": "",
+                                    "matrixAssignments": {}
+                                },
+                                "type": "cascading-advanced",
+                                "clauses": [
+                                    {
+                                        "rules": [
+                                            {
+                                                "id": "b00f281f-4d28-4be0-8929-0139c5102c32",
+                                                "type": "condition",
+                                                "field": "var(weight_date)",
+                                                "value": "",
+                                                "operator": "is_not_empty",
+                                                "caseSensitive": false
+                                            }
+                                        ],
+                                        "outcome": {
+                                            "value": "true",
+                                            "isKilled": false,
+                                            "batch_name": "",
+                                            "recipient_notes": "",
+                                            "matrixAssignments": {}
+                                        },
+                                        "rootLogicType": "AND"
+                                    }
+                                ]
+                            },
+                            "date_type": "var(weight_date)",
+                            "add_metric": true,
+                            "metric_codes": "227.."
+                        },
+                        {
+                            "id": "height",
+                            "metric": "height",
+                            "add_date": false,
+                            "date_type": "",
+                            "add_metric": true,
+                            "metric_codes": "229.."
+                        },
+                        {
+                            "id": "bmi",
+                            "metric": "bmi",
+                            "add_date": false,
+                            "date_type": "",
+                            "add_metric": true,
+                            "metric_codes": "22K.."
+                        },
+                        {
+                            "id": "heart_rate",
+                            "metric": "heart_rate",
+                            "add_date": false,
+                            "date_type": "",
+                            "add_metric": false,
+                            "metric_codes": "X773s"
+                        },
+                        {
+                            "id": "o2_level",
+                            "metric": "o2_level",
+                            "add_date": false,
+                            "date_type": "",
+                            "add_metric": false,
+                            "metric_codes": "X77cx"
+                        },
+                        {
+                            "id": "smoker",
+                            "metric": "smoker",
+                            "add_date": false,
+                            "date_type": "",
+                            "add_metric": false,
+                            "metric_codes": "X77cx"
+                        }
+                    ],
+                    "isSkip": false,
+                    "columns": [
+                        {
+                            "key": "metric",
+                            "type": "input",
+                            "label": "Metrics Name"
+                        },
+                        {
+                            "key": "add_metric",
+                            "type": "boolean",
+                            "label": "Add Metric?",
+                            "parentField": true,
+                            "canConditional": true
+                        },
+                        {
+                            "key": "metric_codes",
+                            "type": "input",
+                            "label": "Metric Code",
+                            "dependsOn": "add_metric",
+                            "canConditional": true
+                        },
+                        {
+                            "key": "add_date",
+                            "type": "boolean",
+                            "label": "Add Date?",
+                            "canConditional": true
+                        },
+                        {
+                            "key": "date_type",
+                            "type": "dropdown",
+                            "label": "Date Type",
+                            "options": [
+                                {
+                                    "id": "letter_date",
+                                    "label": "Letter Date",
+                                    "jsonField": true
+                                },
+                                {
+                                    "id": "incident_date",
+                                    "label": "Incident Date",
+                                    "jsonField": true
+                                },
+                                {
+                                    "id": "weight_date",
+                                    "label": "Weight Date",
+                                    "jsonField": true
+                                }
+                            ],
+                            "dependsOn": "add_date",
+                            "canConditional": true
+                        }
+                    ],
+                    "isActive": true,
+                    "helperText": "Manage metrics, their codes, and associated dates.",
+                    "enableSearch": false,
+                    "usePagination": true
+                }
+            ],
+            "sectionKey": "metrics_config_rules",
+            "isCollapsed": false
+        },
+        "assignment_rules": {
+            "title": "Assignment of Letter (Forwarding)",
+            "fields": [
+                {
+                    "id": "forwardLetter",
+                    "type": "boolean",
+                    "value": {
+                        "else": {
+                            "value": {
+                                "primaryValue": "true",
+                                "forwarding_to": "Kynoby Coding",
+                                "forwarding_type": "Group"
+                            },
+                            "isKilled": false,
+                            "batch_name": "",
+                            "recipient_notes": "",
+                            "matrixAssignments": {
+                                "choose_flag": {
+                                    "flag_color": "",
+                                    "primaryValue": "false"
+                                }
+                            }
+                        },
+                        "type": "cascading-advanced",
+                        "clauses": [
+                            {
+                                "rules": [
+                                    {
+                                        "id": "121dbaff-6d23-4870-bd1d-9896d6586e77",
+                                        "type": "condition",
+                                        "field": "var(recipient_notes)",
+                                        "value": "",
+                                        "operator": "is_not_empty",
+                                        "caseSensitive": false
+                                    }
+                                ],
+                                "outcome": {
+                                    "value": {
+                                        "primaryValue": "true",
+                                        "forwarding_to": "Kynoby Actions",
+                                        "forwarding_type": "Group"
+                                    },
+                                    "isKilled": false,
+                                    "batch_name": "",
+                                    "recipient_notes": "",
+                                    "matrixAssignments": {
+                                        "choose_flag": {
+                                            "flag_color": "URGENT",
+                                            "primaryValue": "true"
+                                        }
+                                    }
+                                },
+                                "rootLogicType": "AND"
+                            }
+                        ]
+                    },
+                    "isSkip": false,
+                    "isActive": true,
+                    "dependents": [
+                        {
+                            "id": "forwarding_type",
+                            "type": "dropdown",
+                            "value": "",
+                            "options": [
+                                "Group",
+                                "Team",
+                                "Staff"
+                            ],
+                            "helperText": "where do you want to forward the letter (Group, Team, Staff)"
+                        },
+                        {
+                            "id": "forwarding_to",
+                            "value": "",
+                            "helperText": "where do you want to forward the letter (Usergroup: Kynoby Coding)"
+                        }
+                    ],
+                    "helperText": "If you want to forward the letter to specific user/team/staff, choose 'Yes', otherwise 'No'"
+                },
+                {
+                    "id": "choose_flag",
+                    "type": "boolean",
+                    "value": {
+                        "flag_color": "",
+                        "primaryValue": "false"
+                    },
+                    "isSkip": false,
+                    "isActive": true,
+                    "dependents": [
+                        {
+                            "id": "flag_color",
+                            "type": "dropdown",
+                            "value": "",
+                            "options": [
+                                {
+                                    "id": "URGENT",
+                                    "label": "URGENT"
+                                },
+                                {
+                                    "id": "Green",
+                                    "label": "Green"
+                                },
+                                {
+                                    "id": "Pink",
+                                    "label": "Pink"
+                                },
+                                {
+                                    "id": "Yellow",
+                                    "label": "Yellow"
+                                },
+                                {
+                                    "id": "Black",
+                                    "label": "Black"
+                                }
+                            ],
+                            "helperText": "Define Flag Color"
+                        }
+                    ],
+                    "helperText": "Do you want to choose flag?"
+                }
+            ],
+            "sectionKey": "assignment_rules",
+            "isCollapsed": false
+        }
+    }
+]

@@ -19,7 +19,7 @@ export const isEmpty = (val) => {
 /**
  * Resolve a variable reference (var(...)) from input inputData or localContext
  */
-export const resolveVariable = (varString, inputData, localContext = {}, fieldKey = "") => {
+export const resolveVariable = (varString, inputData, localContext = {}, fieldKey = "", context) => {
     if (!varString || typeof varString !== "string") {
         return varString;
     }
@@ -64,6 +64,13 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
             .reduce((acc, part) => (acc ? acc[part] : undefined), inputData);
     }
 
+    if (fieldVal === undefined && context && typeof context.getSnapshot === "function") {
+        const snapshot = context.getSnapshot();
+        fieldVal = inputVal
+            .split(".")
+            .reduce((acc, part) => (acc ? acc[part] : undefined), snapshot);
+    }
+
     if (fieldVal === undefined) {
         logger.warn(`[${fieldKey}] Field '${inputVal}' is not found in input inputData`);
         return false;
@@ -77,21 +84,21 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
 /**
  * Recursively resolves variables in strings, arrays, and objects.
  */
-export const resolveDeep = (value, inputData, localContext = {}, fieldKey = "") => {
+export const resolveDeep = (value, inputData, localContext = {}, fieldKey = "", context = null) => {
     if (isEmpty(value)) return value;
 
     if (typeof value === "string") {
-        return resolveVariable(value, inputData, localContext, fieldKey);
+        return resolveVariable(value, inputData, localContext, fieldKey, context);
     }
 
     if (Array.isArray(value)) {
-        return value.map((item) => resolveDeep(item, inputData, localContext, fieldKey));
+        return value.map((item) => resolveDeep(item, inputData, localContext, fieldKey, context));
     }
 
     if (typeof value === "object") {
         const resolvedObj = {};
         for (const [k, v] of Object.entries(value)) {
-            resolvedObj[k] = resolveDeep(v, inputData, localContext, fieldKey);
+            resolvedObj[k] = resolveDeep(v, inputData, localContext, fieldKey, context);
         }
         return resolvedObj;
     }

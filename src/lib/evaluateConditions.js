@@ -3,33 +3,41 @@ import logger from "./logger.js";
 import { isEmpty, resolveDeep } from "../utils/util.js";
 
 /**
- * Resolves a value from inputData, localContext, or as a literal.
- * Supports var(...) syntax and path resolution.
+ * Helper to resolve a value from multiple sources: InputData, Local (Row) Context, and Global Context.
  */
-export const resolveValue = (path, inputData, localContext = {}, ruleKey = "", isField = false) => {
-  if (typeof path !== "string") return path;
+const getActualValue = (path, inputData, localContext, context, isField) => {
+  // 1. Try to resolve as a variable first (recursively if needed)
+  const resolved = resolveDeep(path, inputData, localContext, "", context);
 
-  // Try to resolve as a variable first (recursively if needed, though usually just a string here)
-  const resolved = resolveDeep(path, inputData, localContext, ruleKey);
-
-  // If resolution happened (it was a var() string), return it
+  // if (it was a var() string), return it
   if (resolved !== path) return resolved;
 
-  // Otherwise, try implicit path resolution (e.g. "metrics.0.value")
-  const val = getValue(path, localContext, inputData);
+  // 2. Try implicit path resolution (e.g. "metrics.0.value")
+  // Lookup Order: Local Context -> Input Data -> Global Snapshot
+  const snapshot = context && typeof context.getSnapshot === "function" ? context.getSnapshot() : {};
+  const val = getValue(path, localContext, inputData, snapshot);
 
   // If it's the 'value' part and not found as a property, treat as literal
   if (val === undefined && !isField) return path;
   return val;
+}
+
+/**
+ * Resolves a value from inputData, localContext, or as a literal.
+ * Supports var(...) syntax and path resolution.
+ */
+export const resolveValue = (path, inputData, localContext = {}, ruleKey = "", isField = false, context = null) => {
+  if (typeof path !== "string") return path;
+  return getActualValue(path, inputData, localContext, context, isField);
 };
 
-export function evaluateCondition(inputData, condition, ruleKey, localContext = {}) {
+export function evaluateCondition(inputData, condition, ruleKey, localContext = {}, context = null) {
   try {
     const { field, operator, value } = condition;
     const caseSensitive = !!condition.case_sensitive || !!condition.caseSensitive || false;
 
-    const fieldVal = resolveValue(field, inputData, localContext, ruleKey, true);
-    const inputVal = resolveValue(value, inputData, localContext, ruleKey, false);
+    const fieldVal = resolveValue(field, inputData, localContext, ruleKey, true, context);
+    const inputVal = resolveValue(value, inputData, localContext, ruleKey, false, context);
 
     if (fieldVal === false && !["is_null", "is_empty"].includes(operator)) {
       logger.warn(`[${ruleKey}] Field '${field}' is not found in inputData. Skipping Condition`);

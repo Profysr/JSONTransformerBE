@@ -11,6 +11,14 @@ import { TransformationContext } from "./TransformationContext.js";
 export const transformerHelper = (inputData, configRules) => {
     const startTime = Date.now();
     logger.info(`Configuration has ${Object.keys(configRules).length} sections. Started JSON Transformation`);
+/**
+ * letter_type: ""
+ * incident_date:"",
+ * Exception Required ❌
+ * letter_codes_list: [{...}],
+ * metrics: {...}
+ * Assignment Required ❌
+ */
 
     // 1. Initialize Context with immutable input
     const context = new TransformationContext(inputData);

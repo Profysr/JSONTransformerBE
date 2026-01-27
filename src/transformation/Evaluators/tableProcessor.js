@@ -34,7 +34,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
     const evaluateField = (fieldKey, val, localRow = {}) => {
         const meta = metaMap.get(fieldKey) || {};
         if (meta.canConditional) {
-            const result = applyRule(inputData, val, fieldKey, localRow);
+            const result = applyRule(inputData, val, fieldKey, localRow, context);
 
             // Handle kill scenario immediately if it's a rule result
             if (result !== null && typeof result === "object" && result.isKilled === true) {
@@ -77,7 +77,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         const shouldAddValue = evaluateField(skipField, row[skipField], row);
 
         console.log("ShouldAddValue: ", shouldAddValue);
-        
+
         /**
          * Checking if automation needs to be killed or row should be skipped
          */
