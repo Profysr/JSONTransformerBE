@@ -97,8 +97,8 @@ export const processMetrics = (inputData, rules, context) => {
         skipField: "add_metric",
         identifierKey: "metric",
         context, // Pass the context
-        onRowProcess: (row, inputData, { index }) => {
-            const metricName = row.metric;
+        onRowProcess: (processedRow, inputData, { index }) => {
+            const metricName = processedRow.metric;
             if (!metricName) return null;
 
             // Find matching metric in input data (case-insensitive)
@@ -113,25 +113,22 @@ export const processMetrics = (inputData, rules, context) => {
 
             const rawValue = inputMetrics[metricKey];
 
-            // Prepare context for Template Engine
+            // Prepare context for Template Engine - use processed fields (e.g. for evaluated add_date)
             const rowContext = {
-                ...row,
+                ...processedRow,
                 metricName,
                 rawValue,
-                metric_codes: row.metric_codes,
-                add_date: row.add_date,
-                date_type: row.date_type
+                metric_codes: processedRow.metric_codes,
+                add_date: processedRow.add_date,
+                date_type: processedRow.date_type
             };
-
-            // Note: TemplateEngine currently uses its own evaluateTemplateCondition
-            // which doesn't take contextInstance yet. We might need to update it as well.
 
             // Check if this is a Blood Pressure metric
             const isBP = ["blood_pressure", "bp"].includes(metricName.toLowerCase());
 
             if (isBP) {
                 // Return array of two items (systolic + diastolic)
-                return splitBP(metricName, rawValue, row.metric_codes, row, rules, context);
+                return splitBP(metricName, rawValue, processedRow.metric_codes, processedRow, rules, context);
             } else {
                 // Return single metric item
                 logger.info(`[Metrics][${metricName}] Processing with value: ${rawValue}`);

@@ -32,14 +32,16 @@ export const errorMiddleware = (err, req, res, next) => {
   }
 
   // Log the error before sending response
-  logger.error(`[${statusCode}] ${message}`, {
+  logger.info(`[${statusCode}] Returning Error Response: ${message}`, {
     path: req.path,
     method: req.method,
-    error: err.message,
   });
 
+  // Ensure we always return JSON, not HTML
+  res.setHeader('Content-Type', 'application/json');
   return res.status(statusCode).json({
     success: false,
     message: message,
+    ...(process.env.NODE_ENV !== "production" && { stack: err.stack }) // Include stack in dev for easier debugging
   });
 };

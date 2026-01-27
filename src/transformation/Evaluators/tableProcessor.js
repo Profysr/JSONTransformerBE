@@ -1,5 +1,6 @@
 import logger from "../../lib/logger.js";
 import { applyRule } from "./ApplyRule.js";
+import { isUnifiedValue, processUnifiedValue, isKilled, handleRuleResult } from "../../utils/transformationUtils.js";
 
 export const processTableRules = (inputData, tableConfig, options = {}) => {
     const {
@@ -36,35 +37,12 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         if (meta.canConditional) {
             const result = applyRule(inputData, val, fieldKey, localRow, context);
 
-            // Handle kill scenario immediately if it's a rule result
-            if (result !== null && typeof result === "object" && result.isKilled === true) {
-                return result;
+            const source = `table:${sectionKey}`;
+            if (handleRuleResult(fieldKey, result, context, source, localRow)) {
+                return result; // Still return the kill result for upstream handling
             }
 
-            let finalValue = result;
-
-            // Handle result objects (Cascading Advanced)
-            if (result !== null && typeof result === "object" && result.hasOwnProperty("value")) {
-                finalValue = result.value;
-
-                // Apply Matrix Assignments to context if available
-                if (context && result.matrixAssignments) {
-                    for (const [mKey, mVal] of Object.entries(result.matrixAssignments)) {
-                        context.addCandidate(mKey, mVal, `matrix:${sectionKey}:${fieldKey}`);
-                    }
-                }
-
-                // Apply Recipient Notes if available
-                if (context && (result.notes)) {
-                    context.addNote(result.notes);
-                }
-            }
-
-            if (finalValue !== val) {
-                const rowId = getRowId(localRow, rows.indexOf(localRow));
-                logger.info(`[${sectionKey}][Table][${rowId}][${fieldKey}] Rule change: "${val}" -> "${finalValue}"`);
-            }
-            return finalValue;
+            return localRow[fieldKey];
         }
         return val;
     };
@@ -81,7 +59,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         /**
          * Checking if automation needs to be killed or row should be skipped
          */
-        if (shouldAddValue !== null && typeof shouldAddValue === "object" && shouldAddValue.isKilled === true) {
+        if (isKilled(shouldAddValue)) {
             logger.warn(`[${sectionKey}][Table][${rowId}] Skip field triggered KILL.`);
             return { ...shouldAddValue, sectionKey, rowIdx: index };
         }
@@ -102,7 +80,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
             if (key === skipField) continue;
             const val = evaluateField(key, row[key], row);
 
-            if (val !== null && typeof val === "object" && val.isKilled === true) {
+            if (isKilled(val)) {
                 rowKilled = true;
                 killResult = val;
                 break;

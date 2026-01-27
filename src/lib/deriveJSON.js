@@ -1,6 +1,7 @@
 import { CONFIG } from "../global/AppConfig.js";
 import { isEmpty, trimString } from "../utils/util.js";
 import logger from "./logger.js";
+import { ErrorHandler } from "../middleware/errorHandler.js";
 
 const displayLogs = (msg, type = "info") => {
   if (CONFIG.nodeEnv.includes("production")) return;
@@ -8,7 +9,7 @@ const displayLogs = (msg, type = "info") => {
   if (type === "info") {
     logger.info(msg);
   } else if (type === "error") {
-    logger.error(msg);
+    logger.log("error", msg); // Use log directly to avoid the potential of throwing if we changed logger again
   } else if (type === "warn") {
     logger.warn(msg);
   }
@@ -41,9 +42,7 @@ const cleanValue = (val, fieldId = "unknown") => {
  */
 const processTableValue = (rows, columns, fieldId) => {
   if (!Array.isArray(rows) || !Array.isArray(columns)) {
-    throw new Error(
-      `[Table: ${fieldId}] Validation failed: 'rows' or 'columns' must be arrays.`,
-    );
+    return new ErrorHandler(400, `[Table: ${fieldId}] Validation failed: 'rows' or 'columns' must be arrays.`);
   }
 
   const refinedRows = rows.map((row, index) => {
@@ -82,21 +81,25 @@ const processTableValue = (rows, columns, fieldId) => {
 /** Major function, deriving JSON Values and normalize them */
 export const deriveJSONRules = (config) => {
   const output = {};
-displayLogs("Starting JSON derivation from configuration...", "info");
-  if (!config || !Array.isArray(config) || config.length === 0) {
-    throw new Error("Configuration data is missing or is not a valid array.");
+
+  displayLogs("Starting JSON derivation from configuration...", "info");
+
+  if (!config || typeof config !== "object") {
+    return new ErrorHandler(400, "Configuration data is missing or is not a valid object.");
   }
 
-  config.forEach((section) => {
-    const sectionName = trimString(section.sectionKey) || "Unknown Section";
+  Object.entries(config).forEach(([key, section]) => {
+    // Basic validation: skip properties that are not section objects (must have fields array)
+    if (!section || typeof section !== "object" || !Array.isArray(section.fields)) {
+      displayLogs(`Skipping non-section attribute: ${key}`, "info");
+      return;
+    }
+
+    const sectionName = trimString(section.sectionKey) || key || "Unknown Section";
     displayLogs(`Processing Section: ${sectionName}`, "info");
 
     const sectionData = {};
     let hasData = false;
-
-    if (!section.fields || !Array.isArray(section.fields)) {
-      throw new Error(`Section '${sectionName}' has no valid fields array.`);
-    }
 
     section.fields.forEach((field) => {
       const fieldId = trimString(field.id);
@@ -111,29 +114,34 @@ displayLogs("Starting JSON derivation from configuration...", "info");
 
       /** Separate method for table. Using same for the rest types */
       if (field.type === "table") {
-        const processedRows = processTableValue(
-          field.value,
-          field.columns,
-          fieldId,
-        );
+        try {
+          const processedRows = processTableValue(
+            field.value,
+            field.columns,
+            fieldId,
+          );
 
-        if (!processedRows || processedRows.length === 0) {
-          displayLogs(`[${fieldLogId}] Table result empty, skipping field.`, "info");
+          if (!processedRows || processedRows.length === 0) {
+            displayLogs(`[${fieldLogId}] Table result empty, skipping field.`, "info");
+            return;
+          }
+
+          // TRIM APPLIED HERE: Column metadata keys
+          let columns = field.columns
+            .filter(
+              (curr) => curr.canConditional === true || !isEmpty(curr.dependsOn),
+            )
+            .map((curr) => ({
+              key: trimString(curr.key),
+              dependsOn: trimString(curr.dependsOn),
+              canConditional: curr.canConditional,
+            }));
+
+          valueToInclude = { columns, value: processedRows };
+        } catch (tableErr) {
+          logger.log("error", `Failed to process table ${fieldId}: ${tableErr.message}`);
           return;
         }
-
-        // TRIM APPLIED HERE: Column metadata keys
-        let columns = field.columns
-          .filter(
-            (curr) => curr.canConditional === true || !isEmpty(curr.dependsOn),
-          )
-          .map((curr) => ({
-            key: trimString(curr.key),
-            dependsOn: trimString(curr.dependsOn),
-            canConditional: curr.canConditional,
-          }));
-
-        valueToInclude = { columns, value: processedRows };
       } else {
         valueToInclude = cleanValue(valueToInclude, fieldId);
       }
@@ -147,7 +155,7 @@ displayLogs("Starting JSON derivation from configuration...", "info");
     if (hasData && section.sectionKey) {
       output[trimString(section.sectionKey)] = sectionData;
     } else {
-      displayLogs(`No data found or sectionKey missing.`, "warn");
+      displayLogs(`No data found or sectionKey missing for ${key}.`, "warn");
     }
   });
 

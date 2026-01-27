@@ -35,8 +35,9 @@ router.get(
     const fileContent = fs.readFileSync(inputPath, "utf-8");
     const json = JSON.parse(fileContent);
 
-    // Assuming input.json has a root property "config" which is the array
-    const result = deriveJSONRules(json.config);
+    // rules.json has structure { response: { ... }, null_sections: [] }
+    const configData = json.response || (Array.isArray(json) ? json[0] : json);
+    const result = deriveJSONRules(configData);
     return res.status(200).json(result);
   })
 );

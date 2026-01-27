@@ -3,22 +3,12 @@ import { processMetrics } from "./handlers/metricsHandler.js";
 import { processReadCodes } from "./handlers/readCodesHandler.js";
 import { processGeneralRules } from "./handlers/generalProcessor.js";
 import { TransformationContext } from "./TransformationContext.js";
-
-// if condition true, forward Letter = Yes
-
-// forward Letter = No 
+import { ErrorHandler } from "../middleware/errorHandler.js";
+import { sectionKeys } from "../utils/transformationUtils.js";
 
 export const transformerHelper = (inputData, configRules) => {
     const startTime = Date.now();
     logger.info(`Configuration has ${Object.keys(configRules).length} sections. Started JSON Transformation`);
-/**
- * letter_type: ""
- * incident_date:"",
- * Exception Required ❌
- * letter_codes_list: [{...}],
- * metrics: {...}
- * Assignment Required ❌
- */
 
     // 1. Initialize Context with immutable input
     const context = new TransformationContext(inputData);
@@ -29,15 +19,25 @@ export const transformerHelper = (inputData, configRules) => {
         logger.info(`[Section: ${sectionKey}] Started Processing...`);
 
         if (!sectionRules || typeof sectionRules !== "object") {
-            throw new Error(`[Section: ${sectionKey}] Configuration is invalid or missing.`);
+            return new ErrorHandler(400, `[Section: ${sectionKey}] Configuration is invalid or missing.`);
         }
 
-        if (sectionKey === "metrics") {
+        // Identify section type based on key or internal sectionKey property
+        let sectionType = sectionKey;
+        if (sectionRules.sectionKey) {
+            sectionType = sectionRules.sectionKey;
+        }
+
+        // Use frontend-defined sectionKeys for validation and dispatch
+        if (sectionType === "metrics_config_rules") {
             processMetrics(inputData, sectionRules, context);
-        } else if (sectionKey === "readCodes") {
+        } else if (sectionType === "e2e_config_json") {
             processReadCodes(inputData, sectionRules, context);
-        } else {
+        } else if (sectionKeys.includes(sectionType)) {
             processGeneralRules(inputData, sectionRules, context);
+        } else {
+            logger.warn(`[Section: ${sectionKey}] Unknown section type/key. Skipping to prevent data leakage.`);
+            return new ErrorHandler(400, `[Section: ${sectionKey}] Invalid Configuration. Section is not recognized.`);
         }
 
         if (context.killResult) {
@@ -48,7 +48,6 @@ export const transformerHelper = (inputData, configRules) => {
 
     // 2. Resolve Final Output
     const finalOutput = context.getFinalOutput();
-    // const output = { ...inputData, ...finalOutput };
 
     const totalDuration = Date.now() - startTime;
     logger.info(`Data transformation completed successfully in ${totalDuration}ms`);

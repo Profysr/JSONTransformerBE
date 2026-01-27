@@ -6,7 +6,7 @@ export class TransformationContext {
     constructor(inputData) {
         this.originalInput = inputData; // Immutable input
         this.candidates = new Map(); // Map<Key, Array<{value, source, isKilled}>>
-        this.notes = [];
+        this.recipient_notes = [];
         this.killResult = null;
     }
 
@@ -58,7 +58,7 @@ export class TransformationContext {
      */
     addNote(note) {
         if (note && typeof note === "string") {
-            this.notes.push(note);
+            this.recipient_notes.push(note);
         }
     }
 
@@ -75,15 +75,15 @@ export class TransformationContext {
 
     /**
      * Returns a snapshot of the current state for context resolution.
-     * Contains all "winner" candidates and the notes array.
+     * Contains all "winner" candidates and the recipient_notes array.
      */
     getSnapshot() {
         const snapshot = {
-            notes: this.notes,
+            recipient_notes: this.recipient_notes,
             ...Object.fromEntries(
                 Array.from(this.candidates.entries())
                     .map(([key, list]) => [key, list[0]?.value])
-                    .filter(([_, value]) => isEmpty(value))
+                    .filter(([_, value]) => !isEmpty(value))
             )
         };
         return snapshot;
@@ -124,9 +124,9 @@ export class TransformationContext {
             output["letter_codes"] = "";
         }
 
-        // Append Notes if any
-        if (this.notes.length > 0) {
-            output["notes"] = this.notes;
+        // Append recipient_notes if any
+        if (this.recipient_notes.length > 0) {
+            output["recipient_notes"] = this.recipient_notes;
             output["AddNotesToRecipient"] = true;
         } else {
             output["AddNotesToRecipient"] = false;

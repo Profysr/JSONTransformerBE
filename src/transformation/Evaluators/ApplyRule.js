@@ -1,6 +1,7 @@
 import logger from "../../lib/logger.js";
 import { resolveVariable } from "../../utils/util.js";
 import { evaluateCascadingAdvanced } from "./EvaluateRule.js";
+import { isAdvancedLogic } from "../../utils/transformationUtils.js";
 
 /** 
  * There are 4 types of rules:
@@ -12,11 +13,7 @@ import { evaluateCascadingAdvanced } from "./EvaluateRule.js";
 export const applyRule = (inputData, fieldValue, fieldKey, localContext = {}, context = null) => {
 
     // 1. Check if the fieldValue is configured through advanced logic
-    if (
-        typeof fieldValue === "object" &&
-        fieldValue !== null &&
-        fieldValue.type === "cascading-advanced"
-    ) {
+    if (isAdvancedLogic(fieldValue)) {
         const result = evaluateCascadingAdvanced(inputData, fieldValue, fieldKey, localContext, context);
 
         if (result.isKilled) {

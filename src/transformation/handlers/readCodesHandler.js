@@ -4,6 +4,7 @@ import { isEmpty } from "../../utils/util.js";
 import { applyTemplate } from "../Evaluators/TemplateEngine.js";
 import { applyRule } from "../Evaluators/ApplyRule.js";
 import { processTableRules } from "../Evaluators/tableProcessor.js";
+import { isUnifiedValue, processUnifiedValue, handleRuleResult, isKilled } from "../../utils/transformationUtils.js";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -148,11 +149,6 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys, context) =>
       continue;
     }
 
-    const isAdvancedRule =
-      typeof ruleConfig === "object" &&
-      ruleConfig !== null &&
-      ruleConfig.type === "cascading-advanced";
-
     // Evaluate rule with code object as local context
     const contextualFieldKey = `${key} [Code: ${childCode}]`;
     const result = applyRule(
@@ -163,63 +159,14 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys, context) =>
       context,
     );
 
-    // Handle KILL scenario
-    if (
-      result !== null &&
-      typeof result === "object" &&
-      result.isKilled === true
-    ) {
-      logger.warn(`[${contextualFieldKey}] Rule triggered KILL`);
+    const source = `readCode:${childCode}`;
+    if (handleRuleResult(key, result, context, source, codeObj)) {
       return {
         ...result,
         isKilled: true,
         field: key,
         inputData: inputData,
       };
-    }
-
-    // Extract value if result is result object
-    let finalValue = result;
-    if (
-      result &&
-      typeof result === "object" &&
-      result.hasOwnProperty("value") &&
-      result.hasOwnProperty("isKilled")
-    ) {
-      finalValue = result.value;
-
-      // Handle Matrix Assignments
-      if (
-        result.matrixAssignments &&
-        typeof result.matrixAssignments === "object"
-      ) {
-        for (const [mKey, mVal] of Object.entries(result.matrixAssignments)) {
-          const resolvedMVal = resolveValue(
-            mVal,
-            inputData,
-            codeObj,
-            `matrix:${childCode}`,
-            false,
-            context
-          );
-          codeObj[mKey] = resolvedMVal;
-          logger.info(
-            `[${childCode}] Matrix assignment: ${mKey} = ${resolvedMVal}`,
-          );
-        }
-      }
-
-      // Handle Recipient Notes
-      if (result.notes) {
-        context.addNote(result.notes);
-      }
-    }
-
-    // Advanced rules override, static rules fill missing values
-    if (isAdvancedRule) {
-      codeObj[key] = finalValue;
-    } else if (isEmpty(codeObj[key])) {
-      codeObj[key] = finalValue;
     }
   }
 
@@ -257,9 +204,7 @@ export const processReadCodes = (inputData, rules, context) => {
   }
 
   if (
-    useExistingReadCodes !== null &&
-    typeof useExistingReadCodes === "object" &&
-    useExistingReadCodes.isKilled === true
+isKilled(useExistingReadCodes)
   ) {
     logger.warn(`[ReadCodes] add_readcodes toggle triggered KILL`);
     context.setKilled({
@@ -309,8 +254,8 @@ export const processReadCodes = (inputData, rules, context) => {
           codesMap.delete(childCode);
         }
       },
-      onRowProcess: (row, inputData, { index }) => {
-        const childCode = row.child;
+      onRowProcess: (processedRow, inputData, { index }) => {
+        const childCode = processedRow.child;
         if (!childCode) return null;
 
         // Check if code already exists in map (to override) or is new (to merge)
@@ -330,22 +275,23 @@ export const processReadCodes = (inputData, rules, context) => {
         }
 
         // Apply table row properties to code object (Overriding existing if present)
-        Object.keys(row).forEach((key) => {
+        Object.keys(processedRow).forEach((key) => {
           if (["child", "child_code", "addCode", "id"].includes(key)) return;
 
           // Handle forced mappings separately
           if (key === "forcedMappings") {
-            if (row[key] && row[key] !== childCode) {
-              pendingForcedMappings.push({ from: childCode, to: row[key] });
+            if (processedRow[key] && processedRow[key] !== childCode) {
+              pendingForcedMappings.push({ from: childCode, to: processedRow[key] });
             }
             return;
           }
 
-          codeObj[key] = row[key];
+          codeObj[key] = processedRow[key];
         });
 
         if (isNew) {
           codesMap.set(childCode, codeObj);
+          logger.info(`[ReadCodes] codesMap size after add: ${codesMap.size}`);
         }
 
         return null;

@@ -82,7 +82,7 @@ const applyTransforms = (value, transforms, context) => {
  */
 export const applyTemplate = (template, rowData, context = null) => {
     if (!template || typeof template !== "object") {
-        throw new Error('Output Template must be an object for collections and tables.');
+        return new ErrorHandler(400, 'Output Template must be an object for collections and tables.');
     }
 
     const result = {};

@@ -38,18 +38,22 @@ class BatchLogger {
    * Handles immediate console output for both environments.
    */
   _logToConsole(logEntry) {
+    const timestamp = new Date().toISOString();
+    const { level, message, stack, meta } = logEntry;
+
     if (this.isProduction) {
       // Production: Output a concise, stringified version
-      const { level, message, meta } = logEntry;
-      console.log(JSON.stringify({ level, message, meta }));
+      console.log(JSON.stringify({ timestamp, level, message, meta }));
     } else {
       // Development: Output human-readable format
-      const { level, message, stack, meta } = logEntry;
-      let base = `[${level.toUpperCase()}]: ${stack || message}`;
-      const metaObj = meta;
+      let base = `[${timestamp}] [${level.toUpperCase()}]: ${stack || message}`;
 
-      if (Object.keys(metaObj).length > 0) {
-        base += ` | Meta: ${JSON.stringify(metaObj)}`;
+      if (meta && Object.keys(meta).length > 0) {
+        // Remove 'err' from meta for cleaner printing if stack is already present
+        const { err, ...cleanMeta } = meta;
+        if (Object.keys(cleanMeta).length > 0) {
+          base += ` | Meta: ${JSON.stringify(cleanMeta, null, 2)}`;
+        }
       }
       console.log(base);
     }
@@ -90,7 +94,6 @@ class BatchLogger {
   }
   error(message, meta) {
     this.log("error", message, meta);
-    throw new Error(message);
   }
   debug(message, meta) {
     this.log("debug", message, meta);

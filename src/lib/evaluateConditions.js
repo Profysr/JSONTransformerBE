@@ -1,6 +1,7 @@
 import { OPERATORS, getValue } from "../utils/Operators.js";
 import logger from "./logger.js";
 import { isEmpty, resolveDeep } from "../utils/util.js";
+import { ErrorHandler } from "../middleware/errorHandler.js";
 
 /**
  * Helper to resolve a value from multiple sources: InputData, Local (Row) Context, and Global Context.
@@ -46,7 +47,7 @@ export function evaluateCondition(inputData, condition, ruleKey, localContext = 
 
     // Validation & Early Exits
     const handler = OPERATORS[operator];
-    if (!handler) throw new Error(`Unknown operator: ${operator}`);
+    if (!handler) return new ErrorHandler(400, `Unknown operator: ${operator}`);
 
     const isUnary = ["is_empty", "is_not_empty", "is_null", "is_not_null"].includes(operator);
     if (!isUnary && isEmpty(inputVal)) {
@@ -62,7 +63,7 @@ export function evaluateCondition(inputData, condition, ruleKey, localContext = 
     return result;
 
   } catch (error) {
-    logger.error(`[${ruleKey}] Condition Error: ${error.message}`);
-    throw error; // Re-throw to fail the whole transformation (Strict Mode)
+    logger.log("error", `[${ruleKey}] Condition Error: ${error.message}`);
+    return new ErrorHandler(500, `Condition evaluation failed: ${error.message}`);
   }
 }

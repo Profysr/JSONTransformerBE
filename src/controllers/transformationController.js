@@ -35,13 +35,16 @@ export const fetchConfigRules = async (inst_id, letter_type) => {
     );
 
     /** Extracting data and passing it to next function to normalize */
-    let backendConfig = result.data[0]?.config_rules.config;
+    let backendConfig = result.data[0];
     let configRules = deriveJSONRules(backendConfig);
 
     return configRules;
   } catch (error) {
-    logger.error(`Failed to fetch config rules: ${error.message}`);
-    throw error;
+    logger.warn(`Failed to fetch config rules: ${error.message}`);
+    return new ErrorHandler(
+      500,
+      `Failed to fetch config rules: ${error.message}`
+    );
   }
 };
 
@@ -103,11 +106,13 @@ export const processTransformation = catchAsyncHandler(
         );
       }
 
-      console.log("Config Rules: ", configRules);
-      return
-
       /** pass the inputData and rules to transformData function */
       const output = transformerHelper(inputData, configRules);
+
+      /** Check if transformerHelper returned an error instead of result object */
+      if (output instanceof ErrorHandler) {
+        return next(output);
+      }
 
       /** if kill property found, then storing it with output */
       if (output && output.isKilled === true) {

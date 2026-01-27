@@ -54,11 +54,11 @@ const parseActions = (outcome) => {
     });
   }
 
-  // Notes
-  if (outcome.notes) {
+  // recipient_notes
+  if (outcome.recipient_notes) {
     actions.push({
       type: "note",
-      text: trimString(outcome.notes),
+      text: trimString(outcome.recipient_notes),
     });
   }
 

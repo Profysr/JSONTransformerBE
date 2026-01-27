@@ -1,12 +1,13 @@
 import logger from "../../lib/logger.js";
 import { evaluateCondition } from "../../lib/evaluateConditions.js";
 import { isEmpty } from "../../utils/util.js";
+import { ErrorHandler } from "../../middleware/errorHandler.js";
 
 /** This is the first child that takes the rules, logicType and pass it to the next function for evaluation */
 export const evaluateRuleList = (inputData, rules, logicType, fieldKey, localContext = {}, context = null) => {
     // Validate rules array
     if (!rules || !Array.isArray(rules) || rules.length === 0) {
-        throw new Error(`[${fieldKey}] Invalid or empty rules array in configuration.`);
+        return new ErrorHandler(400, `[${fieldKey}] Invalid or empty rules array in configuration.`);
     }
 
     const result =
@@ -26,7 +27,7 @@ export const evaluateRuleRecursive = (inputData, rule, fieldKey, localContext = 
         logger.info(`[${fieldKey}] Evaluating Group (Logic: ${rule.logicType})`);
 
         if (!rule.rules || !Array.isArray(rule.rules)) {
-            throw new Error(`[${fieldKey}] Group rule missing 'rules' array in configuration.`);
+            return new ErrorHandler(400, `[${fieldKey}] Group rule missing 'rules' array in configuration.`);
         }
 
         return evaluateRuleList(inputData, rule.rules, rule.logicType, fieldKey, localContext, context);
@@ -43,7 +44,7 @@ export const evaluateRuleRecursive = (inputData, rule, fieldKey, localContext = 
 export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, localContext = {}, context = null) => {
     for (const [index, clause] of fieldValue.clauses.entries()) {
         if (!clause || typeof clause !== "object" || !Array.isArray(clause.rules)) {
-            throw new Error(`[${fieldKey}] Clause ${index + 1} is invalid or missing rules array.`);
+            return new ErrorHandler(400, `[${fieldKey}] Clause ${index + 1} is invalid or missing rules array.`);
         }
 
         logger.info(
@@ -68,7 +69,7 @@ export const evaluateCascadingAdvanced = (inputData, fieldValue, fieldKey, local
                 `[${fieldKey}] Condition satisfied at Clause ${index + 1}. isKilled: ${isKilled}`
             );
             return {
-                ...outcome, // Return full object (value, notes, batch_name, etc.)
+                ...outcome, // Return full object (value, recipient_notes, batch_name, etc.)
                 value: outcome.value == "skip" ? "true" : outcome.value,
                 field: fieldKey,
                 isKilled,
