@@ -154,7 +154,13 @@ export class TransformationContext {
         for (const [key, candidates] of this.candidates.entries()) {
             const winner = this._pickWinner(candidates);
             if (winner) {
-                output[key] = winner.value;
+                if (isUnifiedValue(winner.value)) {
+                    const { primaryValue, ...dependents } = winner.value;
+                    output[key] = primaryValue;
+                    Object.assign(output, dependents);
+                } else {
+                    output[key] = winner.value;
+                }
             }
         }
 
