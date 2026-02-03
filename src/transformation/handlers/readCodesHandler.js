@@ -1,102 +1,50 @@
 import logger from "../../lib/logger.js";
-import { isEmpty } from "../../utils/util.js";
 import { applyTemplate } from "../Evaluators/TemplateEngine.js";
 import { applyRule } from "../Evaluators/ApplyRule.js";
 import { processTableRules } from "../Evaluators/tableProcessor.js";
-import { handleRuleResult, isKilled } from "../../utils/transformationUtils.js";
 
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
 
-// Initialize codes map from existing letter_codes_list
-const initializeCodesMap = (existingList) => {
-  const codesMap = new Map();
+const getLateralityMappings = (rules) => {
+  const mappingMap = new Map();
+  const table = rules.laterality_mappings;
 
-  existingList.forEach((item) => {
-    if (item.child) {
-      codesMap.set(item.child, { ...item });
+  if (table && Array.isArray(table.value)) {
+    table.value.forEach((row) => {
+      const side = row.side;
+      const mappingsStr = row.mappings || "";
+      if (side && mappingsStr) {
+        mappingsStr.split(",").forEach((m) => {
+          const trimmed = m.trim().toLowerCase();
+          if (trimmed) mappingMap.set(trimmed, side);
+        });
+      }
+    });
+  }
+
+  return mappingMap;
+};
+
+const applyLateralityMapping = (comment, mappingMap) => {
+  if (!comment || typeof comment !== "string" || mappingMap.size === 0) return comment;
+
+  const words = comment.split(/(\b|\s+|[,.;:!])/);
+  const transformed = words.map((word) => {
+    const key = word.trim().toLowerCase();
+    if (mappingMap.has(key)) {
+      return mappingMap.get(key);
     }
+    return word;
   });
 
-  logger.info(`[ReadCodes] Initialized with ${codesMap.size} existing codes`);
-  return codesMap;
+  return transformed.join("");
 };
 
-// Build code object with explicit field mapping using Template Engine
-const buildCodeObj = (codeContext, rules, context) => {
-  // Standard ReadCodes Template
-  const defaultTemplate = {
-    /** General Fields */
-    cTerm: { field: "c_term" },
-    child: { field: "child" },
-    codeType: { field: "code_type" },
-    comments: { field: "comments" },
-
-    /** Date Fields */
-    addStartDate: {
-      field: "add_date",
-      transform: ["toBoolean", "toString"],
-    },
-    startDate: {
-      field: "date_type",
-      condition: { field: "add_date", operator: "contains", value: "true" },
-    },
-    addEndDate: {
-      field: "add_endDate",
-      transform: ["toBoolean", "toString"],
-    },
-    endDate: {
-      field: "endDate_duration",
-      transform: "addMonths",
-      condition: { field: "add_endDate", operator: "contains", value: "true" },
-    },
-
-    // Conditional fields
-    attachProblem: {
-      field: "attach_problems",
-      condition: {
-        logic: "OR",
-        rules: [
-          { field: "code_type", operator: "contains", value: "diagnosis" },
-          {
-            field: "search_codes_in_problems",
-            operator: "equals",
-            value: true,
-          },
-        ],
-      },
-    },
-    createProblem: {
-      field: "create_problems",
-      condition: {
-        field: "code_type",
-        operator: "contains",
-        value: "diagnosis",
-      },
-    },
-
-    promoteProblem: { field: "promote_problem" },
-    putSummary: { field: "put_summary" },
-    problemSeverity: {
-      field: "problem_severity",
-      transform: "mapSeverity",
-      condition: {
-        logic: "OR",
-        rules: [
-          { field: "create_problems", operator: "equals", value: true },
-          { field: "promote_problem", operator: "is_not_empty" },
-          { field: "put_summary", operator: "is_not_empty" },
-        ],
-      },
-    },
-  };
-
-  const result = applyTemplate(defaultTemplate, codeContext, context);
-  return result;
-};
-
-// Apply forced mappings to remap code identifiers
+/**
+ * Apply forced mappings to remap code identifiers
+ */
 const applyForcedMappings = (codesMap, mappings) => {
   mappings.forEach((mapping) => {
     const codeObj = codesMap.get(mapping.from);
@@ -111,65 +59,36 @@ const applyForcedMappings = (codesMap, mappings) => {
   });
 };
 
-// Extract global rules that apply to all codes
-const extractGlobalRules = (inputData, rules, context) => {
-  const globalRuleKeys = [
-    "use_inactive",
-    "override_bilateral",
-    "search_codes_in_problems",
-  ];
-  const globalRules = {};
+/**
+ * Build the base code/problem object using the template engine
+ */
+const buildBaseObj = (data, rules, context) => {
+  // Define the strict template as requested
+  const template = {
+    // Core Identity
+    child: { field: "child" },
+    comments: { field: "comments" },
 
-  globalRuleKeys.forEach((key) => {
-    if (rules[key] !== undefined) {
-      globalRules[key] = applyRule(inputData, rules[key], key, {}, context);
-    }
-  });
+    // Date Logic
+    addStartDate: { field: "add_date" }, // Keep as-is (unified object or value)
+    startDate: {
+      field: "date_type",
+      condition: { field: "add_date", operator: "contains", value: "true" }
+    },
 
-  return globalRules;
-};
+    // Problem Flags (Unified Fields)
+    promoteProblem: { field: "promote_problem" },
+    putSummary: { field: "put_summary" },
+    problemSeverity: {
+      field: "problem_severity",
+      transform: "mapSeverity",
+    },
+  };
 
-// Apply configuration rules to each code object
-const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys, context) => {
-  const childCode = codeObj.child;
+  // Note: TemplateEngine automatically handles nested structure if the source data 
+  // contains the dependent values within a unified object structure.
 
-  for (const key of Object.keys(rules)) {
-    // Skip global rules, add_readcodes toggle, and table configs
-    if (key === "add_readcodes" || globalRuleKeys.includes(key)) continue;
-
-    const ruleConfig = rules[key];
-
-    // Skip table configurations
-    if (
-      ruleConfig &&
-      typeof ruleConfig === "object" &&
-      Array.isArray(ruleConfig.value)
-    ) {
-      continue;
-    }
-
-    // Evaluate rule with code object as local context
-    const contextualFieldKey = `${key} [Code: ${childCode}]`;
-    const result = applyRule(
-      inputData,
-      ruleConfig,
-      contextualFieldKey,
-      codeObj,
-      context,
-    );
-
-    const source = `readCode:${childCode}`;
-    if (handleRuleResult(key, result, context, source, codeObj, { addToContext: false })) {
-      return {
-        ...result,
-        isKilled: true,
-        field: key,
-        inputData: inputData,
-      };
-    }
-  }
-
-  return null; // No kill
+  return applyTemplate(template, data, context);
 };
 
 // ============================================
@@ -179,188 +98,121 @@ const applyRulesToCode = (inputData, codeObj, rules, globalRuleKeys, context) =>
 export const processReadCodes = (inputData, rules, context) => {
   logger.info(`[ReadCodes] Starting transformation...`);
 
-  const globalRuleKeys = [
-    "use_inactive",
-    "override_bilateral",
-    "search_codes_in_problems",
-  ];
-
-  // Step 1: Evaluate add_readcodes toggle (Check context first for overrides like matrix assignments)
-  let useExistingReadCodes = context.getCandidate("add_readcodes");
-
-  if (useExistingReadCodes === undefined) {
-    useExistingReadCodes = applyRule(
-      inputData,
-      rules.add_readcodes,
-      "add_readcodes",
-      {},
-      context
-    );
-  } else {
-    logger.info(
-      `[ReadCodes] Using context override for add_readcodes: ${useExistingReadCodes}`,
-    );
-  }
-
-  if (
-    isKilled(useExistingReadCodes)
-  ) {
-    logger.warn(`[ReadCodes] add_readcodes toggle triggered KILL`);
-    context.setKilled({
-      ...useExistingReadCodes,
-      isKilled: true,
-      field: "add_readcodes",
-    });
-    return;
-  }
-
-  const shouldIncludeExisting = !(
-    useExistingReadCodes == "false" || useExistingReadCodes == false
-  );
-
-  if (shouldIncludeExisting) {
-    logger.info(
-      `[ReadCodes] add_readcodes is true, keeping existing codes, present in letter codes list`,
-    );
-  } else {
-    logger.info(
-      `[ReadCodes] add_readcodes is false, skipping existing codes from input.`,
-    );
-  }
-
-  // Step 2: Initialize codes map from letter_codes_list (Empty if toggle was false)
-  const existingList = shouldIncludeExisting
-    ? inputData.output?.letter_codes_list || inputData.letter_codes_list || []
-    : [];
-  const codesMap = initializeCodesMap(existingList);
+  // 1. Initialize lists and flags
+  const readCodes = [];
+  const createProblems = [];
+  const attachProblems = [];
   const pendingForcedMappings = [];
+  let download_problems_csv = false;
 
-  // Step 3: Process specific_codes table
+  // 2. Setup Laterality
+  const lateralityMap = getLateralityMappings(rules);
+
+  // 3. Prepare Existing Codes Map (for overrides from specific_codes)
+  const existingCodes = inputData.letter_codes_list || [];
+  const codesMap = new Map();
+  existingCodes.forEach(c => {
+    if (c.child) codesMap.set(c.child, { ...c });
+  });
+
+  // 4. Determine which codes to process
+  // If add_readcodes is false, we only process what's in specific_codes table
+  const useExisting = context.getCandidate("add_readcodes") ?? applyRule(inputData, rules.add_readcodes, "add_readcodes", {}, context);
+  const shouldIncludeExisting = !(useExisting == "false" || useExisting == false);
+
+  if (!shouldIncludeExisting) {
+    logger.info(`[ReadCodes] Skipping existing codes, only using specific_codes table.`);
+    codesMap.clear();
+  }
+
+  // 5. Process specific_codes table to populate/override codesMap
   if (rules.specific_codes) {
-    logger.info(`[ReadCodes] Processing specific_codes table...`);
-
-    const tableResults = processTableRules(inputData, rules.specific_codes, {
+    processTableRules(inputData, rules.specific_codes, {
       sectionKey: "ReadCodes:specific_codes",
-      skipField: "addCode",
-      identifierKey: "child",
-      context, // Pass context
-      onRowSkip: (row) => {
-        const childCode = row.child;
-        if (childCode && codesMap.has(childCode)) {
-          logger.info(
-            `[ReadCodes][specific_codes] Explicit skip for ${childCode}. Removing from list.`,
-          );
-          codesMap.delete(childCode);
-        }
-      },
-      onRowProcess: (processedRow, inputData, { index }) => {
+      context,
+      onRowProcess: (processedRow) => {
         const childCode = processedRow.child;
         if (!childCode) return null;
 
-        // Check if code already exists in map (to override) or is new (to merge)
-        let codeObj = codesMap.get(childCode);
-        const isNew = !codeObj;
+        let codeObj = codesMap.get(childCode) || { child: childCode };
 
-        if (isNew) {
-          logger.info(
-            `[ReadCodes][specific_codes] Adding new code: ${childCode}`,
-          );
-          codeObj = {
-            child: childCode,
-            read_code_date: null,
-            comments: null,
-            code_type: null,
-          };
-        }
-
-        // Apply table row properties to code object (Overriding existing if present)
-        Object.keys(processedRow).forEach((key) => {
-          if (["child", "child_code", "addCode", "id"].includes(key)) return;
-
-          // Handle forced mappings separately
-          if (key === "forcedMappings") {
-            if (processedRow[key] && processedRow[key] !== childCode) {
-              pendingForcedMappings.push({ from: childCode, to: processedRow[key] });
-            }
-            return;
-          }
-
+        // Merge table properties (excluding internal keys)
+        Object.keys(processedRow).forEach(key => {
+          if (["id", "forced_mappings", "addCode"].includes(key)) return;
           codeObj[key] = processedRow[key];
         });
 
-        if (isNew) {
-          codesMap.set(childCode, codeObj);
-          logger.info(`[ReadCodes] codesMap size after add: ${codesMap.size}`);
+        // Handle forced mappings separately
+        if (processedRow.forced_mappings && processedRow.forced_mappings !== childCode && processedRow.forced_mappings !== "skip") {
+          pendingForcedMappings.push({ from: childCode, to: processedRow.forced_mappings });
         }
 
+        codesMap.set(childCode, codeObj);
         return null;
-      },
+      }
     });
 
-    // Check for KILL from table processing
-    if (tableResults && !Array.isArray(tableResults) && tableResults.isKilled) {
-      logger.warn(
-        `[ReadCodes][specific_codes] Table processing triggered KILL`,
-      );
-      context.setKilled(tableResults);
-      return;
+    // Apply forced mappings before logic processing
+    if (pendingForcedMappings.length > 0) {
+      applyForcedMappings(codesMap, pendingForcedMappings);
     }
   }
 
-  // REQUIREMENT 2: Apply general rules that apply to all codes (existing or from table).
-  logger.info(
-    `[ReadCodes] Applying configuration rules to ${codesMap.size} codes...`,
-  );
-  const entries = Array.from(codesMap.entries());
+  // 6. Iterate and apply logic for each code
+  const problemsCsv = inputData.problems_csv || [];
 
-  for (const [childCode, codeObj] of entries) {
-    const result = applyRulesToCode(inputData, codeObj, rules, globalRuleKeys, context);
-
-    if (result && result.isKilled) {
-      context.setKilled(result);
-      return;
+  codesMap.forEach((codeData, childCode) => {
+    // A. Apply laterality mapping to comments
+    if (codeData.comments) {
+      codeData.comments = applyLateralityMapping(codeData.comments, lateralityMap);
     }
-  }
 
-  // Step 5: Apply forced mappings
-  if (pendingForcedMappings.length > 0) {
-    logger.info(
-      `[ReadCodes] Applying ${pendingForcedMappings.length} forced mappings...`,
-    );
-    applyForcedMappings(codesMap, pendingForcedMappings);
-  }
+    // B. Evaluate rules for this specific code
+    const tableRow = rules.specific_codes?.value?.find(r => r.child === childCode) || {};
 
-  // Step 6: Extract global rules and build final output
-  const globalRules = extractGlobalRules(inputData, rules, context);
-  logger.info(`[ReadCodes] Building final output...`);
-  const finalCodes = Array.from(codesMap.values()).map((code) =>
-    buildCodeObj({ ...code, ...globalRules }, rules, context),
-  );
+    // Way 1 & 2: Add Read Codes
+    // Logic: If addCode is true OR it has special behavioral fields (promote, putSummary, severity)
+    const isWay1 = tableRow.addCode === true || (shouldIncludeExisting && tableRow.addCode !== false);
+    const isWay2 = tableRow.promote_problem || tableRow.put_summary || tableRow.problem_severity;
 
-  // Add global rules onto the root level of inputData
-  globalRuleKeys.forEach((key) => {
-    if (!isEmpty(globalRules[key])) {
-      context.addCandidate(key, globalRules[key], "section:readCodes (global)");
+    if (isWay1 || isWay2) {
+      const codeObj = buildBaseObj(codeData, rules, context);
+      readCodes.push(codeObj);
+    }
+
+    // Way 3 & 4: Problem Links
+    // 3: Match and attach (attach_problem: true)
+    // 4: Just attach/create (create_problem: true)
+    if (tableRow.attach_problem) {
+      download_problems_csv = true;
+
+      if (problemsCsv.length > 0) {
+        // Try to match
+        const matchingIndex = problemsCsv.findIndex(p =>
+          p.code === childCode || p.readCode === childCode || p.child === childCode
+        );
+
+        if (matchingIndex !== -1) {
+          attachProblems.push(matchingIndex);
+        } else if (tableRow.create_problem) {
+          // If match fails and create_problem is true, we create it
+          createProblems.push(buildBaseObj(codeData, rules, context));
+        }
+      } else {
+        // Defer matching - the automation flag will handle the re-request
+        logger.info(`[ReadCodes] Code ${childCode} requires matching but problems_csv is missing.`);
+      }
+    } else if (tableRow.create_problem) {
+      // Way 4 (part 2): Just create without looking for existing
+      createProblems.push(buildBaseObj(codeData, rules, context));
     }
   });
 
-  // Step 8: Update inputData with transformed codes
-  // Add to context candidates (Always add even if empty)
-  context.addCandidate(
-    "letter_codes_list",
-    finalCodes || [],
-    "section:readCodes",
-  );
-  context.addCandidate(
-    "letter_codes",
-    (finalCodes || []).map((c) => c.child).join(", ") || "",
-    "section:readCodes",
-  );
-  context.addCandidate(
-    "add_readcodes",
-    shouldIncludeExisting ? "true" : "false",
-    "section:readCodes",
-  );
+  // 7. Store results in context
+  context.addCandidate("readCodes", readCodes, "section:readCodes");
+  context.addCandidate("createProblems", createProblems, "section:readCodes");
+  context.addCandidate("attachProblems", attachProblems, "section:readCodes");
+  context.addCandidate("download_problems_csv", download_problems_csv, "section:readCodes");
 
-  logger.info(`[ReadCodes] Completed. Total codes: ${finalCodes.length}`);
+  logger.info(`[ReadCodes] Completed. readCodes: ${readCodes.length}, createProblems: ${createProblems.length}, attachProblems: ${attachProblems.length}, download_problems_csv: ${download_problems_csv}`);
 };

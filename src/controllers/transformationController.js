@@ -151,3 +151,75 @@ export const processTransformation = catchAsyncHandler(
     }
   }
 );
+
+/**
+ * Specialized endpoint for Read Codes Problem Resolution (Part 2)
+ * Only processes the e2e_config_json section with problems_csv
+ */
+export const processProblemResolution = catchAsyncHandler(
+  async (req, res, next) => {
+    const { inst_id } = req.params;
+    const inputData = req.body || {};
+
+    /** Extract context for logging */
+    let nhs_id = inputData?.nhs_id;
+    let letter_id = inputData?.letter_id;
+    let letter_type = inputData?.letter_type;
+
+    logger.info("Received Problem Resolution request:", {
+      inst_id,
+      letter_type,
+      nhsid: nhs_id,
+      letter_id,
+      hasCsv: !!(inputData.problems_csv && inputData.problems_csv.length)
+    });
+
+    try {
+      if (!inputData || typeof inputData !== "object") {
+        return next(new ErrorHandler(400, "Invalid input data."));
+      }
+
+      // 1. Fetch full configuration
+      let configRules = await fetchConfigRules(inst_id, letter_type);
+
+      if (!configRules || Object.keys(configRules).length === 0) {
+        return next(new ErrorHandler(404, `No configuration rules found for inst_id: ${inst_id}`));
+      }
+
+      // 2. Filter rules: ONLY keep e2e_config_json (Read Codes)
+      let readCodesSection = configRules.e2e_config_json;
+
+      // Fallback search by sectionKey if not valid
+      if (!readCodesSection) {
+        readCodesSection = Object.values(configRules).find(r => r && r.sectionKey === "e2e_config_json");
+      }
+
+      if (!readCodesSection) {
+        return next(new ErrorHandler(404, "Read Codes configuration (e2e_config_json) not found in rules."));
+      }
+
+      const filteredRules = {
+        e2e_config_json: readCodesSection
+      };
+
+      logger.info(`[ProblemResolution] Filtered rules to only process e2e_config_json.`);
+
+      // 3. Transform using the filtered rules
+      const output = transformerHelper(inputData, filteredRules);
+
+      if (output instanceof ErrorHandler) {
+        return next(output);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Read Codes Problem Resolution completed.",
+        output,
+      });
+
+    } catch (error) {
+      logger.error("Problem Resolution Error:", { error: error.message, stack: error.stack });
+      return next(new ErrorHandler(500, `Problem Resolution failed: ${error.message}`));
+    }
+  }
+);

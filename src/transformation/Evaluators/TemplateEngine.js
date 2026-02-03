@@ -2,6 +2,7 @@ import { TransformFunctions } from "../../utils/TransformFunctions.js";
 import logger from "../../lib/logger.js";
 import { evaluateCondition as evaluateSingleCondition } from "../../lib/evaluateConditions.js";
 import { isEmpty } from "../../utils/util.js";
+import { isUnifiedValue } from "../../utils/transformationUtils.js";
 
 /**
  * Helper: Recursively evaluate conditions (logical groups or operator rules)
@@ -125,8 +126,18 @@ export const applyTemplate = (template, rowData, context = null) => {
         else {
             value = config;
         }
-
-        result[key] = isEmpty(value) ? "skip" : value;
+        
+        // Flatten unified value logic:
+        if (isUnifiedValue(value)) {
+            // 1. Assign primaryValue to the mapped key
+            result[key] = value.primaryValue;
+            // 2. Spread only strict dependents to the root result
+            Object.keys(value).forEach(depKey => {
+                result[depKey] = value[depKey];
+            });
+        } else {
+            result[key] = isEmpty(value) ? "skip" : value;
+        }
     }
 
     return result;

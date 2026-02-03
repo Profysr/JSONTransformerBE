@@ -164,7 +164,7 @@ export class TransformationContext {
             }
         }
 
-        ["metrics", "letter_codes_list", "letter_codes"].forEach(field => {
+        ["metrics", "readCodes", "createProblems", "attachProblems"].forEach(field => {
             if (!output.hasOwnProperty(field)) {
                 output[field] = field === "letter_codes" ? "" : [];
             }

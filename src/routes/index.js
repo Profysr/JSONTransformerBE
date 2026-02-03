@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { processTransformation } from "../controllers/transformationController.js";
+import { processTransformation, processProblemResolution } from "../controllers/transformationController.js";
 import { parseRules } from "../controllers/ruleParserController.js";
 import { deriveJSONRules } from "../lib/deriveJSON.js";
 import fs from "fs";
@@ -19,6 +19,7 @@ router.get("/", (req, res) => {
 });
 
 router.post("/transform/:inst_id", processTransformation);
+router.post("/transform/resolve-problems/:inst_id", processProblemResolution);
 router.post("/parse-rules", parseRules);
 
 

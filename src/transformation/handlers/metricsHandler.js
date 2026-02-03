@@ -89,13 +89,11 @@ export const processMetrics = (inputData, rules, context) => {
         return row;
     });
 
-    const preparedTable = { ...metricsTable, value: preparedRows };
+    metricsTable.value = preparedRows;
 
     // Step 3: Process metrics_list table with explicit row processing
-    const results = processTableRules(inputData, preparedTable, {
+    const results = processTableRules(inputData, metricsTable, {
         sectionKey: "Metrics",
-        skipField: "add_metric",
-        identifierKey: "metric",
         context, // Pass the context
         onRowProcess: (processedRow, inputData, { index }) => {
             const metricName = processedRow.metric;

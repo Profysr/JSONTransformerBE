@@ -55,7 +55,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
          * The basic purpose of this: if add_codes = false and we wanna skip the row, we can use this field to skip the row.
          * But the complexity was, if the code already exist in our input, then we should need to remove it from there
          * But the best part is,  I'm passing onRowSkip as callback. So it is optional. Making our code dynamic 
-         */ 
+         */
         if (parentFieldCol) {
             const shouldAddValue = evaluateField(parentFieldCol, row[parentFieldCol], row);
 
@@ -95,7 +95,12 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
             return { ...killResult, sectionKey, rowIdx: index };
         }
 
-        // 3. Delegate section-specific processing (e.g., BP splitting, forcedMappings)
+        // 3. Collect recipient notes if present and not "skip"
+        if (processedRow.recipient_notes && processedRow.recipient_notes !== "skip" && context?.addNote) {
+            context.addNote(processedRow.recipient_notes);
+        }
+
+        // 4. Delegate section-specific processing (e.g., BP splitting, forcedMappings)
         const outcome = onRowProcess(processedRow, inputData, { evaluateField, index });
 
         if (Array.isArray(outcome)) {
