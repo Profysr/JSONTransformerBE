@@ -1,0 +1,317 @@
+{
+  "exception_json": {
+    "action_required": "",
+    "safeguarding": "",
+    "deceased": "",
+    "dnacpr": "",
+    "medication": "",
+    "unknown_letter_type": ""
+  },
+  "e2e_config_json": {
+    "add_readcodes": "true",
+    "add_date": {
+      "date_type": "var(incident_date)",
+      "primaryValue": "true"
+    },
+    "specific_codes": {
+      "columns": [
+        {
+          "id": "child",
+          "canConditional": false,
+          "dependsOn": false,
+          "isPrimaryKey": true
+        },
+        {
+          "id": "addCode",
+          "canConditional": true,
+          "dependsOn": false,
+          "parentField": true
+        },
+        {
+          "id": "add_date",
+          "canConditional": true,
+          "dependsOn": false
+        },
+        {
+          "id": "attach_problem",
+          "canConditional": true,
+          "dependsOn": false
+        },
+        {
+          "id": "create_problem",
+          "canConditional": true,
+          "dependsOn": false
+        },
+        {
+          "id": "promote_problem",
+          "canConditional": true,
+          "dependsOn": false,
+          "options": [
+            "skip",
+            "Promote to problem",
+            "Promote to problem until",
+            "Promote to inactive problem"
+          ]
+        },
+        {
+          "id": "put_summary",
+          "canConditional": true,
+          "dependsOn": false,
+          "options": [
+            "skip",
+            "Put in the summary",
+            "Put in summary until",
+            "Put in inactive summary"
+          ]
+        },
+        {
+          "id": "problem_severity",
+          "canConditional": true,
+          "dependsOn": false,
+          "options": [
+            "Minor",
+            "Major"
+          ]
+        },
+        {
+          "id": "forced_mappings",
+          "canConditional": true,
+          "dependsOn": false
+        },
+        {
+          "id": "recipient_notes",
+          "canConditional": true,
+          "dependsOn": false
+        }
+      ],
+      "value": [
+        {
+          "id": "XaKqd",
+          "child": "XaKqd",
+          "c_term": "Letter Received",
+          "addCode": false,
+          "add_date": false,
+          "put_summary": "",
+          "attach_problem": false,
+          "create_problem": false,
+          "forced_mappings": "",
+          "promote_problem": "",
+          "recipient_notes": "",
+          "problem_severity": ""
+        },
+        {
+          "id": "XaBnr",
+          "child": "XaBnr",
+          "c_term": "Screening, monitoring and surveillance",
+          "addCode": true,
+          "add_date": true,
+          "put_summary": "skip",
+          "attach_problem": false,
+          "create_problem": false,
+          "forced_mappings": "skip",
+          "promote_problem": "skip",
+          "recipient_notes": "skip",
+          "problem_severity": ""
+        }
+      ]
+    },
+    "laterality_mappings": {
+      "columns": [
+        {
+          "id": "side",
+          "canConditional": false,
+          "dependsOn": false,
+          "isPrimaryKey": true,
+          "options": [
+            "Left",
+            "Right",
+            "Bilateral"
+          ]
+        },
+        {
+          "id": "mappings",
+          "canConditional": false,
+          "dependsOn": false
+        }
+      ],
+      "value": [
+        {
+          "id": "Left",
+          "side": "Left",
+          "mappings": "l, le, left, lt"
+        },
+        {
+          "id": "Right",
+          "side": "Right",
+          "mappings": "r, re, right, rt"
+        },
+        {
+          "id": "Bilateral",
+          "side": "Bilateral",
+          "mappings": "b, bi, bilateral"
+        }
+      ]
+    }
+  },
+  "metrics_config_rules": {
+    "metrics_list": {
+      "columns": [
+        {
+          "id": "metric",
+          "canConditional": false,
+          "dependsOn": false,
+          "isPrimaryKey": true
+        },
+        {
+          "id": "add_metric",
+          "canConditional": true,
+          "dependsOn": false,
+          "parentField": true
+        },
+        {
+          "id": "metric_codes",
+          "canConditional": true,
+          "dependsOn": "add_metric"
+        },
+        {
+          "id": "add_date",
+          "canConditional": true,
+          "dependsOn": false
+        },
+        {
+          "id": "date_type",
+          "canConditional": true,
+          "dependsOn": "add_date",
+          "options": [
+            {
+              "id": "letter_date",
+              "label": "Letter Date",
+              "jsonField": true
+            },
+            {
+              "id": "incident_date",
+              "label": "Incident Date",
+              "jsonField": true
+            },
+            {
+              "id": "weight_date",
+              "label": "Weight Date",
+              "jsonField": true
+            }
+          ]
+        }
+      ],
+      "value": [
+        {
+          "id": "blood_pressure",
+          "metric": "blood_pressure",
+          "add_date": false,
+          "date_type": "",
+          "add_metric": true,
+          "metric_codes": "2469/246A."
+        },
+        {
+          "id": "weight",
+          "metric": "weight",
+          "add_date": {
+            "else": {
+              "value": "false",
+              "isKilled": false,
+              "batch_name": "",
+              "recipient_notes": "",
+              "matrixAssignments": {
+
+              }
+            },
+            "type": "cascading-advanced",
+            "clauses": [
+              {
+                "rules": [
+                  {
+                    "id": "cb998578-a838-47fc-ad58-96bd2bd9e223",
+                    "type": "condition",
+                    "field": "var(weight_date)",
+                    "value": "",
+                    "operator": "is_not_empty",
+                    "caseSensitive": false
+                  }
+                ],
+                "outcome": {
+                  "value": "true",
+                  "isKilled": false,
+                  "batch_name": "",
+                  "recipient_notes": "",
+                  "matrixAssignments": {
+
+                  }
+                },
+                "rootLogicType": "AND"
+              }
+            ]
+          },
+          "date_type": "var(weight_date)",
+          "add_metric": true,
+          "metric_codes": "227.."
+        },
+        {
+          "id": "height",
+          "metric": "height",
+          "add_date": false,
+          "date_type": "",
+          "add_metric": true,
+          "metric_codes": "229.."
+        },
+        {
+          "id": "bmi",
+          "metric": "bmi",
+          "add_date": false,
+          "date_type": "",
+          "add_metric": true,
+          "metric_codes": "22K.."
+        },
+        {
+          "id": "heart_rate",
+          "metric": "heart_rate",
+          "add_date": false,
+          "date_type": "",
+          "add_metric": false,
+          "metric_codes": ""
+        },
+        {
+          "id": "o2_level",
+          "metric": "o2_level",
+          "add_date": false,
+          "date_type": "",
+          "add_metric": false,
+          "metric_codes": ""
+        },
+        {
+          "id": "smoker",
+          "metric": "smoker",
+          "add_date": false,
+          "date_type": "",
+          "add_metric": false,
+          "metric_codes": ""
+        }
+      ]
+    }
+  },
+  "assignment_rules": {
+    "forwardLetter": {
+      "primaryValue": "false",
+      "forwarding_to": "",
+      "forwarding_type": ""
+    },
+    "choose_flag": {
+      "flag_color": "",
+      "primaryValue": "false"
+    },
+    "notes_and_id": "var(letter_id)"
+  },
+  "letter_type_rule": {
+    "letter_type": "var(letter_type)",
+    "letter_date": "var(incident_date)",
+    "hospital_name": "NHS111",
+    "department": "skip"
+  }
+}

@@ -173,7 +173,8 @@ export class TransformationContext {
         output["recipient_notes"] = this.recipient_notes;
         output["AddNotesToRecipient"] = this.recipient_notes.length > 0;
 
-        const finalOutput = { ...this.originalInput, ...output };
+        // const finalOutput = { ...this.originalInput, ...output };
+        const finalOutput = output;
         Object.keys(finalOutput).forEach(key => {
             if (isEmpty(finalOutput[key])) finalOutput[key] = "skip";
         });

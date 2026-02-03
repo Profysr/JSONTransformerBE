@@ -49,14 +49,15 @@ const processTableValue = (rows, columns, fieldId) => {
     const cleanRow = { ...row };
 
     for (const col of columns) {
-      const colKey = trimString(col.key);
+      const colKey = trimString(col.id);
+      if (!colKey) continue;
 
       /**
        * if a value is dependent and its parent has falsy, then delete the dependent value from the condition
        */
       if (col.dependsOn) {
-        const depValue = trimString(row[col.dependsOn]);
-        if (!depValue || depValue === "false") {
+        const depValue = row[col.dependsOn];
+        if (!depValue || depValue === "false" || depValue === false) {
           displayLogs(
             `[Table: ${fieldId}][Row: ${index}] Skipping column '${colKey}' as its parent '${col.dependsOn}' has falsy value ('${depValue}')`,
             "info"
@@ -126,16 +127,17 @@ export const deriveJSONRules = (config) => {
             return;
           }
 
-          // TRIM APPLIED HERE: Column metadata keys
+          // Extract relevant column metadata
           let columns = field.columns
-            .filter(
-              (curr) => curr.canConditional === true || !isEmpty(curr.dependsOn),
-            )
             .map((curr) => ({
-              key: trimString(curr.key),
-              dependsOn: trimString(curr.dependsOn),
-              canConditional: curr.canConditional,
-            }));
+              id: trimString(curr.id || curr.key),
+              canConditional: curr.canConditional ?? false,
+              dependsOn: trimString(curr.dependsOn) ?? false,
+              ...(curr.isPrimaryKey && { isPrimaryKey: curr.isPrimaryKey }),
+              ...(curr.parentField && { parentField: curr.parentField }),
+              ...(curr.options && { options: curr.options }),
+            }))
+            .filter((curr) => curr.id); // Ensure we don't have empty IDs
 
           valueToInclude = { columns, value: processedRows };
         } catch (tableErr) {

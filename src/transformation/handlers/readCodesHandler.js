@@ -1,10 +1,9 @@
-import { resolveValue } from "../../lib/evaluateConditions.js";
 import logger from "../../lib/logger.js";
 import { isEmpty } from "../../utils/util.js";
 import { applyTemplate } from "../Evaluators/TemplateEngine.js";
 import { applyRule } from "../Evaluators/ApplyRule.js";
 import { processTableRules } from "../Evaluators/tableProcessor.js";
-import { isUnifiedValue, processUnifiedValue, handleRuleResult, isKilled } from "../../utils/transformationUtils.js";
+import { handleRuleResult, isKilled } from "../../utils/transformationUtils.js";
 
 // ============================================
 // HELPER FUNCTIONS

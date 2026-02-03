@@ -1,12 +1,10 @@
 import logger from "../../lib/logger.js";
 import { applyRule } from "./ApplyRule.js";
-import { isUnifiedValue, processUnifiedValue, isKilled, handleRuleResult } from "../../utils/transformationUtils.js";
+import { isKilled, handleRuleResult } from "../../utils/transformationUtils.js";
 
 export const processTableRules = (inputData, tableConfig, options = {}) => {
     const {
         sectionKey = "Unknown",
-        skipField = "skip",
-        identifierKey = null,
         context = null, // Added context to options
         onRowProcess = (row) => row,
         onRowSkip = null
@@ -16,17 +14,18 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
     const columns = tableConfig?.columns || [];
 
     // Map columns for O(1) metadata lookup
-    const metaMap = new Map(columns.map(c => [c.key, c]));
+    const metaMap = new Map(columns.map(c => [c.id, c]));
+    const primaryKeyCol = columns.find(c => c.isPrimaryKey)?.id;
+    const parentFieldCol = columns.find(c => c.parentField)?.id;
+
     logger.info(`[${sectionKey}][Table] Processing ${rows.length} rules.`);
 
     const results = [];
 
-    /**
-     * Helper to get row identification for logging
-     */
+    /** Helper to get row identification for logging */
     const getRowId = (row, index) => {
-        if (identifierKey && row[identifierKey]) return row[identifierKey];
-        return `Row ${index}`;
+        if (primaryKeyCol && row[primaryKeyCol]) return row[primaryKeyCol];
+        return `Index ${index}`;
     };
 
     /**
@@ -51,23 +50,26 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         const row = rows[index];
         const rowId = getRowId(row, index);
 
-        // 1. Evaluate "Should Skip" logic
-        const shouldAddValue = evaluateField(skipField, row[skipField], row);
-
-        console.log("ShouldAddValue: ", shouldAddValue);
-
         /**
-         * Checking if automation needs to be killed or row should be skipped
-         */
-        if (isKilled(shouldAddValue)) {
-            logger.warn(`[${sectionKey}][Table][${rowId}] Skip field triggered KILL.`);
-            return { ...shouldAddValue, sectionKey, rowIdx: index };
-        }
+         * 1. Evaluate "parentField" logic for skipping
+         * The basic purpose of this: if add_codes = false and we wanna skip the row, we can use this field to skip the row.
+         * But the complexity was, if the code already exist in our input, then we should need to remove it from there
+         * But the best part is,  I'm passing onRowSkip as callback. So it is optional. Making our code dynamic 
+         */ 
+        if (parentFieldCol) {
+            const shouldAddValue = evaluateField(parentFieldCol, row[parentFieldCol], row);
 
-        if (shouldAddValue == false || shouldAddValue == "false") {
-            logger.info(`[${sectionKey}][Table][${rowId}] Row skipped.`);
-            if (onRowSkip) onRowSkip(row, inputData, { index });
-            continue;
+            /** Checking if automation needs to be killed or row should be skipped */
+            if (isKilled(shouldAddValue)) {
+                logger.warn(`[${sectionKey}][Table][${rowId}] Parent field triggered KILL.`);
+                return { ...shouldAddValue, sectionKey, rowIdx: index };
+            }
+
+            if (shouldAddValue == false || shouldAddValue == "false" || shouldAddValue == "") {
+                logger.info(`[${sectionKey}][Table][${rowId}] Skipping whole row as parent field has falsy value - ${shouldAddValue}`);
+                if (onRowSkip) onRowSkip(row, inputData, { index });
+                continue;
+            }
         }
 
         // 2. Evaluate all other fields in the row based on metadata
@@ -77,7 +79,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
 
         /** evaluate values for the rows and pass it to callback function */
         for (const key of Object.keys(row)) {
-            if (key === skipField) continue;
+            if (key === parentFieldCol || key === primaryKeyCol) continue;
             const val = evaluateField(key, row[key], row);
 
             if (isKilled(val)) {
@@ -103,8 +105,8 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         }
     }
 
-    if (results.length > 0) {
-        logger.info(`[${sectionKey}][Table] Produced ${results.length} items.`);
-    }
+    // if (results.length > 0) {
+    //     logger.info(`[${sectionKey}][Table] Produced ${results.length} items.`);
+    // }
     return results;
 };
