@@ -1,0 +1,160 @@
+import { toBoolean, isEmpty, resolveDeep } from "../../../shared/utils/generalUtils.js";
+import logger from "../../../shared/logger.js";
+
+// ==================
+// 1 Configuration Constants
+// ==================
+export const sectionKeys = ["general", "letter_type_rule", "exception_json", "e2e_config_json", "metrics_config_rules", "assignment_rules"]
+
+// ==================
+// 2 Type Checker Helpers
+// ==================
+/**
+ * Checks if a value is an advanced logic object
+ */
+export const isAdvancedLogic = (value) => {
+    return (
+        value &&
+        typeof value === "object" &&
+        value.type === "cascading-advanced"
+    );
+};
+
+/**
+ * Checks if a value is a unified field object
+ */
+export const isUnifiedValue = (value) => {
+    return (
+        value &&
+        typeof value === "object" &&
+        "primaryValue" in value &&
+        value.type !== "cascading-advanced"
+    );
+};
+
+/**
+ * Checks if a value is truthy
+ */
+export const isTruthy = (value) => {
+    if (isEmpty(value)) return false;
+    if (typeof value === "boolean") return value;
+    if (typeof value === "string") {
+        return value.toLowerCase() === "true";
+    }
+    if (isUnifiedValue(value)) {
+        return isTruthy(value.primaryValue);
+    }
+    return Boolean(value);
+};
+
+/**
+ * Checks if a value indicates the transformation should be killed.
+ */
+export const isKilled = (value) => {
+    return value && typeof value === "object" && value.isKilled === true;
+};
+
+// ==================
+// 3 Unified Value Processing
+// ==================
+/**
+ * Unpacks a unified value and processes its dependents
+ */
+export const processUnifiedValue = (fieldKey, unifiedObj, context, source, localTarget = null, options = {}) => {
+    const { addToContext = true, logPrefix = null } = options;
+    const prefix = logPrefix || `[${fieldKey}]`;
+    const { primaryValue, ...dependents } = unifiedObj;
+
+    if (addToContext && context) {
+        let contextObj = unifiedObj;
+
+        if (!isTruthy(primaryValue)) {
+            const skippedDependents = Object.fromEntries(
+                Object.keys(dependents).map(k => [k, "skip"])
+            );
+            contextObj = { primaryValue, ...skippedDependents };
+        }
+
+        context.addCandidate(fieldKey, contextObj, source);
+    }
+
+    if (localTarget) {
+        localTarget[fieldKey] = primaryValue;
+    }
+
+    const isWinnerTruthy = isTruthy(primaryValue);
+
+    for (const [depKey, depValue] of Object.entries(dependents)) {
+        let finalDepValue = isWinnerTruthy ? depValue : "skip";
+
+        if (localTarget) {
+            if (isWinnerTruthy) {
+                finalDepValue = resolveDeep(depValue, context?.originalInput || {}, localTarget, depKey, context);
+            }
+            localTarget[depKey] = finalDepValue;
+            logger.info(`${prefix} Mapped related field: ${depKey} = ${JSON.stringify(finalDepValue)}`);
+        }
+    }
+
+    if (!localTarget && !context) {
+        logger.warn(`${prefix} Unexpected state: missing context or target for field investigation.`);
+    }
+};
+
+// ==================
+// 4 Rule Result Orchestration
+// ==================
+/**
+ * Centrally handles result from any rule evaluation
+ */
+export const handleRuleResult = (fieldKey, result, context, source, localTarget = null, options = {}) => {
+    const { addToContext = true, logPrefix = null } = options;
+
+    // 1. Check Kill Signal
+    if (isKilled(result)) {
+        if (context) {
+            context.setKilled({
+                ...result,
+                isKilled: true,
+                field: fieldKey,
+            });
+        }
+        return true;
+    }
+
+    // 2. Simple Values
+    if (result === null || typeof result !== "object") {
+        if (addToContext && context) context.addCandidate(fieldKey, result, source);
+        if (localTarget) localTarget[fieldKey] = result;
+        return false;
+    }
+
+    // 3. Extract recipient_notes
+    if (result.recipient_notes) {
+        if (context) context.addNote(result.recipient_notes);
+    }
+
+    // 4. Handle Matrix Assignments
+    if (result.matrixAssignments && typeof result.matrixAssignments === "object") {
+        for (const [k, v] of Object.entries(result.matrixAssignments)) {
+            if (isUnifiedValue(v)) {
+                processUnifiedValue(k, v, context, `matrix:${fieldKey}`, localTarget, { addToContext: true, logPrefix });
+            } else {
+                if (context) context.addCandidate(k, v, `matrix:${fieldKey}`);
+                if (localTarget) localTarget[k] = v;
+            }
+        }
+    }
+
+    // 5. Process the main 'value'
+    const finalValue = result.hasOwnProperty("value") ? result.value : result;
+
+    if (isUnifiedValue(finalValue)) {
+        processUnifiedValue(fieldKey, finalValue, context, source, localTarget, { addToContext, logPrefix });
+    } else {
+        if (addToContext && context) context.addCandidate(fieldKey, finalValue, source);
+        if (localTarget) localTarget[fieldKey] = finalValue;
+    }
+
+    return false;
+};

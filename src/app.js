@@ -1,103 +1,92 @@
 import express from "express";
-import router from "./routes/index.js";
-import logger from "./lib/logger.js";
-import { errorMiddleware } from "./middleware/errorHandler.js";
-import { jsonParseErrorHandler } from "./middleware/jsonParseErrorHandler.js";
 import cors from "cors";
-import dotenv from "dotenv";
-dotenv.config();
+import router from "./api/routes/transformation.routes.js";
+import logger from "./shared/logger.js";
+import { errorMiddleware } from "./api/middleware/errorHandler.js";
+import { jsonParseErrorHandler } from "./api/middleware/jsonParseErrorHandler.js";
 
+// ==================
+// 1 Initialize App
+// ==================
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
-// Whitelist of allowed origins
-// const whitelist = ["http://localhost:5173", "http://localhost:3001"];
-
-// Define CORS options with dynamic origin check
-const corsOptions = {
-  // origin: function (origin, callback) {
-  //   if (!origin) {
-  //     return callback(null, true);
-  //   }
-  //   if (whitelist.includes(origin)) {
-  //     callback(null, true); // ✅ Allowed
-  //   } else {
-  //     callback(new Error("Not allowed by CORS")); // ❌ Blocked
-  //   }
-  // },
+// ==================
+// 2 Middleware Stack
+// ==================
+app.use(cors({
+  origin: "*", // adjust to specific domain(s) in production
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-};
-
-// ✅ Apply CORS middleware globally
-app.use(cors(corsOptions));
-
-// ✅ Handle pre-flight requests explicitly
-app.options("/", cors(corsOptions));
-
-// Middleware to parse incoming JSON data
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// JSON Parse Error Handler (must be after body parsers)
 app.use(jsonParseErrorHandler);
 
-// Request Logging Middleware
+// ==================
+// 3 Logging & Routes
+// ==================
 app.use((req, res, next) => {
   logger.info(`Incoming ${req.method} request to ${req.url}`);
   next();
 });
 
-// Defined Routes
-app.get("/", (req, res) => {
-  res.send({
-    message: "Transformation Module Backend is running",
-    docs: "/api/v1",
-  });
-});
-
+app.get("/", (req, res) =>
+  res.send({ message: "Transformation Module Backend is running", docs: "/api/v1" })
+);
 app.use("/api/v1", router);
 
-// 404 Handler for undefined routes
-app.use((req, res, next) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.method} ${req.url} not found`,
-  });
+// ==================
+// 4 Error Handling
+// ==================
+app.use((req, res) =>
+  res.status(404).json({ success: false, message: `Route ${req.method} ${req.url} not found` })
+);
+
+// Express error middleware must have 4 args
+app.use((err, req, res, next) => {
+  errorMiddleware(err, req, res, next);
 });
 
-// --- Error Middleware (MUST BE LAST) ---
-app.use(errorMiddleware);
-
-// --- Server Startup ---
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-  console.log(
-    `Use POST request to http://localhost:${PORT}/api/v1/transform/<client_id>/ with your raw JSON in the body.`,
-  );
+// ==================
+// 5 Server Startup
+// ==================
+const server = app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`POST http://localhost:${PORT}/api/v1/transform/<inst_id>/ with JSON`);
 });
 
-// --- Global Crash Handler Setup ---
-process.on("uncaughtException", (err) => {
-  // 1. Log the final crash details immediately.
-  const crashLogEntry = logger._formatLog(
-    "CRASH",
-    "Process exiting due to Uncaught Exception!",
-    { err },
-  );
+// ==================
+// 6 Global Exception Handlers
+// ==================
+const logCrash = (type, err) => {
+  console.error(`!!!! ${type} DETECTED !!!!`);
+  console.error(err);
 
-  console.error(JSON.stringify(crashLogEntry));
-});
+  try {
+    logger.error(`Process exiting due to ${type}!`, {
+      error: err instanceof Error ? err.message : err,
+      stack: err instanceof Error ? err.stack : undefined
+    });
+  } catch (e) {
+    console.error("Failed to log crash:", e.message);
+  }
 
-// Handle Unhandled Promise Rejections
-process.on("unhandledRejection", (reason, promise) => {
-  const rejectionLogEntry = logger._formatLog(
-    "REJECTION",
-    "Unhandled Promise Rejection!",
-    { reason, promise },
-  );
-  console.error(JSON.stringify(rejectionLogEntry));
+  if (type === "REJECTION" || type === "CRASH") {
+    // Graceful shutdown before exit
+    server.close(() => process.exit(1));
+  }
+};
 
-  process.exit(1);
-});
+process.on("uncaughtException", (err) => logCrash("CRASH", err));
+process.on("unhandledRejection", (reason) => logCrash("REJECTION", reason));
+
+// Handle termination signals
+const shutdown = (signal) => {
+  console.log(`${signal} received. Shutting down...`);
+  server.close(() => process.exit(0));
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));

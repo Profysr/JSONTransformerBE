@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "node src/app.js",
+    "start": "node --watch --env-file=.env src/app.js",
     "dev": "node --watch --env-file=.env src/app.js"
   },
   "keywords": [],
