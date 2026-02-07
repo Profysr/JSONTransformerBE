@@ -50,11 +50,11 @@ const evaluateTemplateCondition = (
       const list = rules || [];
       return logic === "OR"
         ? list.some((r) =>
-            evaluateTemplateCondition(r, rowData, ruleKey, context, logPrefix),
-          )
+          evaluateTemplateCondition(r, rowData, ruleKey, context, logPrefix),
+        )
         : list.every((r) =>
-            evaluateTemplateCondition(r, rowData, ruleKey, context, logPrefix),
-          );
+          evaluateTemplateCondition(r, rowData, ruleKey, context, logPrefix),
+        );
     }
 
     if (field && operator) {
@@ -110,6 +110,7 @@ export const applyTemplate = (
   context = null,
   logPrefix = null,
 ) => {
+  // 3.1 Validate Input
   if (!template || typeof template !== "object") {
     return new ErrorHandler(
       400,
@@ -119,7 +120,9 @@ export const applyTemplate = (
 
   const result = {};
 
+  // 3.2 Process Template Keys
   for (const [key, config] of Object.entries(template)) {
+    // 3.3 Evaluate Key Conditions
     if (typeof config === "object" && config !== null && config.condition) {
       const isConditionMet = evaluateTemplateCondition(
         config.condition,
@@ -129,13 +132,14 @@ export const applyTemplate = (
         logPrefix,
       );
       if (!isConditionMet) {
-        result[key] = "skip";
+        result[key] = null;
         continue;
       }
     }
 
     let value;
 
+    // 3.4 Resolve Value
     if (typeof config === "object" && config !== null) {
       if (config.field) {
         value = rowData[config.field];
@@ -154,13 +158,14 @@ export const applyTemplate = (
       value = config;
     }
 
+    // 3.5 Handle Unified vs Simple Values
     if (isUnifiedValue(value)) {
       result[key] = value.primaryValue;
       Object.keys(value).forEach((depKey) => {
         if (depKey !== "primaryValue") result[depKey] = value[depKey];
       });
     } else {
-      result[key] = isEmpty(value) ? "skip" : value;
+      result[key] = isEmpty(value) ? null : value;
     }
   }
 

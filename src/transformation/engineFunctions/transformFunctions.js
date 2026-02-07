@@ -93,20 +93,4 @@ export const TransformFunctions = {
 
     return date.toISOString().split("T")[0];
   },
-
-  /**
-   * Adds months to a date string, preserving the format (ISO or DD/MM/YYYY)
-   */
-  addMonths: (val, context) => {
-    const useEndDate = TransformFunctions.toBoolean(context.add_endDate);
-    const startDateStr = context.date_type;
-    const months = parseInt(val);
-    if (!useEndDate || !startDateStr || isNaN(months)) return "skip";
-
-    const { date, format } = TransformFunctions._parseDate(startDateStr);
-    if (isNaN(date.getTime())) return "";
-
-    date.setMonth(date.getMonth() + months);
-    return TransformFunctions._formatDate(date, format);
-  },
 };
