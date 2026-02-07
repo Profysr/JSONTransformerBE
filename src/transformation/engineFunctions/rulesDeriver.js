@@ -1,7 +1,8 @@
-import { CONFIG } from "../../../config/app.config.js";
-import { isEmpty, trimString } from "../../../shared/utils/generalUtils.js";
-import logger from "../../../shared/logger.js";
-import { ErrorHandler } from "../../../api/middleware/errorHandler.js";
+import { ErrorHandler } from "../../api/middleware/errorHandler.js";
+import { CONFIG } from "../../config/app.config.js";
+import logger from "../../shared/logger.js";
+import { trimString } from "../../shared/utils/generalUtils.js";
+
 
 // ==================
 // 1 Helpers & Logging
@@ -49,7 +50,10 @@ const cleanValue = (val, fieldId = "unknown") => {
  */
 const processTableValue = (rows, columns, fieldId) => {
   if (!Array.isArray(rows) || !Array.isArray(columns)) {
-    return new ErrorHandler(400, `[Table: ${fieldId}] Validation failed: 'rows' or 'columns' must be arrays.`);
+    return new ErrorHandler(
+      400,
+      `[Table: ${fieldId}] Validation failed: 'rows' or 'columns' must be arrays.`,
+    );
   }
 
   const refinedRows = rows.map((row, index) => {
@@ -64,7 +68,7 @@ const processTableValue = (rows, columns, fieldId) => {
         if (!depValue || depValue === "false" || depValue === false) {
           displayLogs(
             `[Table: ${fieldId}][Row: ${index}] Skipping column '${colKey}' as its parent '${col.dependsOn}' has falsy value ('${depValue}')`,
-            "info"
+            "info",
           );
           cleanRow[colKey] = "";
           continue;
@@ -107,7 +111,10 @@ const processField = (field, fieldId, fieldLogId) => {
       );
 
       if (!processedRows || processedRows.length === 0) {
-        displayLogs(`[${fieldLogId}] Table result empty, skipping field.`, "info");
+        displayLogs(
+          `[${fieldLogId}] Table result empty, skipping field.`,
+          "info",
+        );
         return undefined;
       }
 
@@ -124,7 +131,10 @@ const processField = (field, fieldId, fieldLogId) => {
 
       valueToInclude = { columns, value: processedRows };
     } catch (tableErr) {
-      logger.log("error", `Failed to process table ${fieldId}: ${tableErr.message}`);
+      logger.log(
+        "error",
+        `Failed to process table ${fieldId}: ${tableErr.message}`,
+      );
       return undefined;
     }
   } else {
@@ -141,12 +151,17 @@ const processField = (field, fieldId, fieldLogId) => {
  * Processes a single configuration section
  */
 const processSection = (key, section) => {
-  if (!section || typeof section !== "object" || !Array.isArray(section.fields)) {
+  if (
+    !section ||
+    typeof section !== "object" ||
+    !Array.isArray(section.fields)
+  ) {
     displayLogs(`Skipping non-section attribute: ${key}`, "info");
     return null;
   }
 
-  const sectionName = trimString(section.sectionKey) || key || "Unknown Section";
+  const sectionName =
+    trimString(section.sectionKey) || key || "Unknown Section";
   displayLogs(`Processing Section: ${sectionName}`, "info");
 
   const sectionData = {};
@@ -168,7 +183,7 @@ const processSection = (key, section) => {
   if (hasData && section.sectionKey) {
     return {
       key: trimString(section.sectionKey),
-      data: sectionData
+      data: sectionData,
     };
   } else {
     displayLogs(`No data found or sectionKey missing for ${key}.`, "warn");
@@ -186,7 +201,10 @@ export const deriveJSONRules = (config) => {
   displayLogs("Starting JSON derivation from configuration...", "info");
 
   if (!config || typeof config !== "object") {
-    return new ErrorHandler(400, "Configuration data is missing or is not a valid object.");
+    return new ErrorHandler(
+      400,
+      "Configuration data is missing or is not a valid object.",
+    );
   }
 
   Object.entries(config).forEach(([key, section]) => {

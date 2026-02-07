@@ -4,7 +4,8 @@ import fs from "fs";
 import path from "path";
 import catchAsyncHandler from "../middleware/catchAsyncHandler.js";
 import { ErrorHandler } from "../middleware/errorHandler.js";
-import { deriveJSONRules } from "../../core/transformation/engineFunctions/rulesDeriver.js";
+import { deriveJSONRules } from "../../transformation/engineFunctions/rulesDeriver.js";
+
 
 const router = Router();
 

@@ -8,7 +8,7 @@ export class ErrorHandler extends Error {
   }
 }
 
-export const errorMiddleware = (err, req, res, next) => {
+export const errorMiddleware = (err, req, res) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || "Internal Server Error";
 
@@ -38,7 +38,7 @@ export const errorMiddleware = (err, req, res, next) => {
   });
 
   // Ensure we always return JSON, not HTML
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader("Content-Type", "application/json");
   return res.status(statusCode).json({
     success: false,
     message: message,

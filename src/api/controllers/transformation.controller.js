@@ -4,8 +4,9 @@ import { makeRequestWithRetry } from "../../shared/providers/requestClient.js";
 import catchAsyncHandler from "../middleware/catchAsyncHandler.js";
 import { ErrorHandler } from "../middleware/errorHandler.js";
 import { getAccessToken } from "../../shared/providers/auth.service.js";
-import { deriveJSONRules } from "../../core/transformation/engineFunctions/rulesDeriver.js";
-import { transformationEngine } from "../../core/transformationEngine.js";
+import { deriveJSONRules } from "../../transformation/engineFunctions/rulesDeriver.js";
+import { transformationEngine } from "../../transformation/core/transformationEngine.js";
+
 
 // ==================
 // 1 Config Rule Fetching
@@ -131,7 +132,7 @@ export const processTransformation = catchAsyncHandler(
       const configRules = await fetchConfigRules(inst_id, letter_type);
 
       if (!configRules || Object.keys(configRules).length === 0) {
-        logger.error(`No configuration rules found`);
+        logger.error("No configuration rules found");
         return next(new ErrorHandler(404, `No configuration rules found for inst_id: ${inst_id} and letter_type: ${letter_type}`));
       }
 
@@ -224,7 +225,6 @@ export const processProblemResolution = catchAsyncHandler(
         return next(new ErrorHandler(404, "Read Codes configuration (e2e_config_json) not found in rules."));
       }
 
-      logger.info(`[ProblemResolution] Filtered rules to only process e2e_config_json.`);
       const output = executeProblemResolution(inputData, filteredRules);
 
       if (output instanceof ErrorHandler) {

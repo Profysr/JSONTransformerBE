@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node --watch --env-file=.env src/app.js",
-    "dev": "node --watch --env-file=.env src/app.js"
+    "dev": "node --watch --env-file=.env src/app.js",
+    "lint": "eslint . --ext .js"
   },
   "keywords": [],
   "author": "",
@@ -15,5 +16,10 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "globals": "^17.3.0"
   }
 }

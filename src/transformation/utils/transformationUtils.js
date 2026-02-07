@@ -1,10 +1,10 @@
-import { toBoolean, isEmpty, resolveDeep } from "../../../shared/utils/generalUtils.js";
-import logger from "../../../shared/logger.js";
+import logger from "../../shared/logger.js";
+import { isEmpty, resolveDeep } from "../../shared/utils/generalUtils.js";
 
 // ==================
 // 1 Configuration Constants
 // ==================
-export const sectionKeys = ["general", "letter_type_rule", "exception_json", "e2e_config_json", "metrics_config_rules", "assignment_rules"]
+export const sectionKeys = ["general", "letter_type_rule", "exception_json", "e2e_config_json", "metrics_config_rules", "assignment_rules"];
 
 // ==================
 // 2 Type Checker Helpers
@@ -57,14 +57,13 @@ export const isKilled = (value) => {
 // ==================
 // 3 Unified Value Processing
 // ==================
-/**
- * Unpacks a unified value and processes its dependents
- */
+
 export const processUnifiedValue = (fieldKey, unifiedObj, context, source, localTarget = null, options = {}) => {
     const { addToContext = true, logPrefix = null } = options;
     const prefix = logPrefix || `[${fieldKey}]`;
     const { primaryValue, ...dependents } = unifiedObj;
 
+    // 1- Add to context
     if (addToContext && context) {
         let contextObj = unifiedObj;
 
@@ -82,6 +81,7 @@ export const processUnifiedValue = (fieldKey, unifiedObj, context, source, local
         localTarget[fieldKey] = primaryValue;
     }
 
+    // 2- Prepare it for the local context. Will be mostly used in rows and resolve values.
     const isWinnerTruthy = isTruthy(primaryValue);
 
     for (const [depKey, depValue] of Object.entries(dependents)) {
@@ -95,18 +95,12 @@ export const processUnifiedValue = (fieldKey, unifiedObj, context, source, local
             logger.info(`${prefix} Mapped related field: ${depKey} = ${JSON.stringify(finalDepValue)}`);
         }
     }
-
-    if (!localTarget && !context) {
-        logger.warn(`${prefix} Unexpected state: missing context or target for field investigation.`);
-    }
 };
 
 // ==================
 // 4 Rule Result Orchestration
 // ==================
-/**
- * Centrally handles result from any rule evaluation
- */
+
 export const handleRuleResult = (fieldKey, result, context, source, localTarget = null, options = {}) => {
     const { addToContext = true, logPrefix = null } = options;
 

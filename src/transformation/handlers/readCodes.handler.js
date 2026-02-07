@@ -1,4 +1,4 @@
-import logger from "../../../shared/logger.js";
+import logger from "../../shared/logger.js";
 import { applyTemplate } from "../engineFunctions/TemplateEngine.js";
 import { applyRule } from "../evaluators/ApplyRule.js";
 import { processTableRules } from "../evaluators/tableProcessor.js";
@@ -27,7 +27,8 @@ const getLateralityMappings = (rules) => {
 };
 
 const applyLateralityMapping = (comment, mappingMap) => {
-  if (!comment || typeof comment !== "string" || mappingMap.size === 0) return comment;
+  if (!comment || typeof comment !== "string" || mappingMap.size === 0)
+    return comment;
 
   const words = comment.split(/(\b|\s+|[,.;:!])/);
   const transformed = words.map((word) => {
@@ -70,7 +71,7 @@ const buildBaseObj = (data, rules, context) => {
     addStartDate: { field: "add_date" },
     startDate: {
       field: "date_type",
-      condition: { field: "add_date", operator: "contains", value: "true" }
+      condition: { field: "add_date", operator: "contains", value: "true" },
     },
     promoteProblem: { field: "promote_problem" },
     putSummary: { field: "put_summary" },
@@ -87,7 +88,13 @@ const buildBaseObj = (data, rules, context) => {
 // 4 Updates the codesMap based on the specific_codes table
 // ==================
 
-const updateCodesMapFromSpecificCodes = (inputData, specificCodesRules, codesMap, pendingForcedMappings, context) => {
+const updateCodesMapFromSpecificCodes = (
+  inputData,
+  specificCodesRules,
+  codesMap,
+  pendingForcedMappings,
+  context,
+) => {
   if (!specificCodesRules) return;
 
   processTableRules(inputData, specificCodesRules, {
@@ -99,18 +106,25 @@ const updateCodesMapFromSpecificCodes = (inputData, specificCodesRules, codesMap
 
       let codeObj = codesMap.get(childCode) || { child: childCode };
 
-      Object.keys(processedRow).forEach(key => {
+      Object.keys(processedRow).forEach((key) => {
         if (["id", "forced_mappings", "addCode"].includes(key)) return;
         codeObj[key] = processedRow[key];
       });
 
-      if (processedRow.forced_mappings && processedRow.forced_mappings !== childCode && processedRow.forced_mappings !== "skip") {
-        pendingForcedMappings.push({ from: childCode, to: processedRow.forced_mappings });
+      if (
+        processedRow.forced_mappings &&
+        processedRow.forced_mappings !== childCode &&
+        processedRow.forced_mappings !== "skip"
+      ) {
+        pendingForcedMappings.push({
+          from: childCode,
+          to: processedRow.forced_mappings,
+        });
       }
 
       codesMap.set(childCode, codeObj);
       return null;
-    }
+    },
   });
 
   if (pendingForcedMappings.length > 0) {
@@ -125,16 +139,26 @@ const updateCodesMapFromSpecificCodes = (inputData, specificCodesRules, codesMap
  * Processes an individual code entry and determines its destination
  */
 const processCodeEntry = (codeData, childCode, rules, context, options) => {
-  const { shouldIncludeExisting, lateralityMap, problemsCsv, results } = options;
+  const { shouldIncludeExisting, lateralityMap, problemsCsv, results } =
+    options;
 
   if (codeData.comments) {
-    codeData.comments = applyLateralityMapping(codeData.comments, lateralityMap);
+    codeData.comments = applyLateralityMapping(
+      codeData.comments,
+      lateralityMap,
+    );
   }
 
-  const tableRow = rules.specific_codes?.value?.find(r => r.child === childCode) || {};
+  const tableRow =
+    rules.specific_codes?.value?.find((r) => r.child === childCode) || {};
 
-  const isWay1 = tableRow.addCode === true || (shouldIncludeExisting && tableRow.addCode !== false);
-  const isWay2 = tableRow.promote_problem || tableRow.put_summary || tableRow.problem_severity;
+  const isWay1 =
+    tableRow.addCode === true ||
+    (shouldIncludeExisting && tableRow.addCode !== false);
+  const isWay2 =
+    tableRow.promote_problem ||
+    tableRow.put_summary ||
+    tableRow.problem_severity;
 
   if (isWay1 || isWay2) {
     const codeObj = buildBaseObj(codeData, rules, context);
@@ -145,8 +169,11 @@ const processCodeEntry = (codeData, childCode, rules, context, options) => {
     results.download_problems_csv = true;
 
     if (problemsCsv.length > 0) {
-      const matchingIndex = problemsCsv.findIndex(p =>
-        p.code === childCode || p.readCode === childCode || p.child === childCode
+      const matchingIndex = problemsCsv.findIndex(
+        (p) =>
+          p.code === childCode ||
+          p.readCode === childCode ||
+          p.child === childCode,
       );
 
       if (matchingIndex !== -1) {
@@ -155,7 +182,9 @@ const processCodeEntry = (codeData, childCode, rules, context, options) => {
         results.createProblems.push(buildBaseObj(codeData, rules, context));
       }
     } else {
-      logger.warn(`[ReadCodes][${childCode}] Code requires matching but 'problems_csv' is missing from patient data.`);
+      logger.warn(
+        `[ReadCodes][${childCode}] Code requires matching but 'problems_csv' is missing from patient data.`,
+      );
     }
   } else if (tableRow.create_problem) {
     results.createProblems.push(buildBaseObj(codeData, rules, context));
@@ -166,32 +195,44 @@ const processCodeEntry = (codeData, childCode, rules, context, options) => {
 // 6 Main Handler
 // ==================
 export const processReadCodes = (inputData, rules, context) => {
-  logger.info(`[ReadCodes] Starting analysis of letter codes.`);
+  logger.info("[ReadCodes] Starting analysis of letter codes.");
 
   const results = {
     readCodes: [],
     createProblems: [],
     attachProblems: [],
-    download_problems_csv: false
+    download_problems_csv: false,
   };
   const pendingForcedMappings = [];
   const lateralityMap = getLateralityMappings(rules);
 
   const existingCodes = inputData.letter_codes_list || [];
   const codesMap = new Map();
-  existingCodes.forEach(c => {
+  existingCodes.forEach((c) => {
     if (c.child) codesMap.set(c.child, { ...c });
   });
 
-  const useExisting = context.getCandidate("add_readcodes") ?? applyRule(inputData, rules.add_readcodes, "add_readcodes", {}, context);
-  const shouldIncludeExisting = !(useExisting == "false" || useExisting == false);
+  const useExisting =
+    context.getCandidate("add_readcodes") ??
+    applyRule(inputData, rules.add_readcodes, "add_readcodes", {}, context);
+  const shouldIncludeExisting = !(
+    useExisting == "false" || useExisting == false
+  );
 
   if (!shouldIncludeExisting) {
-    logger.info(`[ReadCodes] Focusing only on 'specific_codes' table (existing codes ignored).`);
+    logger.info(
+      "[ReadCodes] Focusing only on 'specific_codes' table (existing codes ignored).",
+    );
     codesMap.clear();
   }
 
-  updateCodesMapFromSpecificCodes(inputData, rules.specific_codes, codesMap, pendingForcedMappings, context);
+  updateCodesMapFromSpecificCodes(
+    inputData,
+    rules.specific_codes,
+    codesMap,
+    pendingForcedMappings,
+    context,
+  );
 
   const problemsCsv = inputData.problems_csv || [];
   codesMap.forEach((codeData, childCode) => {
@@ -199,14 +240,28 @@ export const processReadCodes = (inputData, rules, context) => {
       shouldIncludeExisting,
       lateralityMap,
       problemsCsv,
-      results
+      results,
     });
   });
 
   context.addCandidate("readCodes", results.readCodes, "section:readCodes");
-  context.addCandidate("createProblems", results.createProblems, "section:readCodes");
-  context.addCandidate("attachProblems", results.attachProblems, "section:readCodes");
-  context.addCandidate("download_problems_csv", results.download_problems_csv, "section:readCodes");
+  context.addCandidate(
+    "createProblems",
+    results.createProblems,
+    "section:readCodes",
+  );
+  context.addCandidate(
+    "attachProblems",
+    results.attachProblems,
+    "section:readCodes",
+  );
+  context.addCandidate(
+    "download_problems_csv",
+    results.download_problems_csv,
+    "section:readCodes",
+  );
 
-  logger.info(`[ReadCodes] Analysis completed. Results: ${results.readCodes.length} codes, ${results.createProblems.length} new problems, ${results.attachProblems.length} attached problems.`);
+  logger.info(
+    `[ReadCodes] Analysis completed. Results: ${results.readCodes.length} codes, ${results.createProblems.length} new problems, ${results.attachProblems.length} attached problems.`,
+  );
 };
