@@ -1,17 +1,99 @@
 {
   "exception_json": {
-    "action_required": "",
-    "safeguarding": "",
-    "deceased": "",
-    "dnacpr": "",
-    "medication": "",
-    "unknown_letter_type": ""
+    "action_required": {
+      "else": {
+        "value": "",
+        "isKilled": false,
+        "batch_name": "",
+        "recipient_notes": "",
+        "matrixAssignments": {
+          "choose_flag": {
+            "flag_color": "",
+            "primaryValue": "false"
+          },
+          "forwardLetter": {
+            "primaryValue": "false",
+            "forwarding_to": "",
+            "forwarding_type": ""
+          }
+        }
+      },
+      "type": "cascading-advanced",
+      "clauses": [
+        {
+          "rules": [
+            {
+              "id": "9ff7d924-33ef-45c5-a43a-711916790c2f",
+              "type": "condition",
+              "field": "var(rpa_note)",
+              "value": "Action Required",
+              "operator": "contains",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "skip",
+            "isKilled": false,
+            "batch_name": "",
+            "recipient_notes": "GP Action Required",
+            "matrixAssignments": {
+              "choose_flag": {
+                "flag_color": "URGENT",
+                "primaryValue": "true"
+              },
+              "forwardLetter": {
+                "primaryValue": "true",
+                "forwarding_to": "Kynoby Actions",
+                "forwarding_type": "Group"
+              }
+            }
+          },
+          "rootLogicType": "AND"
+        }
+      ]
+    },
+    "safeguarding": {
+      "else": {
+        "value": "",
+        "isKilled": false,
+        "batch_name": "",
+        "recipient_notes": "",
+        "matrixAssignments": {
+
+        }
+      },
+      "type": "cascading-advanced",
+      "clauses": [
+        {
+          "rules": [
+            {
+              "id": "fc368843-42de-41e4-a43e-b34303d03aff",
+              "type": "condition",
+              "field": "var(rpa_note)",
+              "value": "Safeguarding",
+              "operator": "contains",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "skip",
+            "isKilled": true,
+            "batch_name": "Practice to Review - Urgent",
+            "recipient_notes": "",
+            "matrixAssignments": {
+
+            }
+          },
+          "rootLogicType": "AND"
+        }
+      ]
+    }
   },
   "e2e_config_json": {
     "add_readcodes": "true",
-    "add_date": {
-      "date_type": "var(incident_date)",
-      "primaryValue": "true"
+    "add_read_code_date": {
+      "primaryValue": "true",
+      "read_code_date_type": "var(incident_date)"
     },
     "specific_codes": {
       "columns": [
@@ -22,13 +104,13 @@
           "isPrimaryKey": true
         },
         {
-          "id": "addCode",
+          "id": "add_code",
           "canConditional": true,
           "dependsOn": false,
           "parentField": true
         },
         {
-          "id": "add_date",
+          "id": "add_read_code_date",
           "canConditional": true,
           "dependsOn": false
         },
@@ -47,7 +129,6 @@
           "canConditional": true,
           "dependsOn": false,
           "options": [
-            "skip",
             "Promote to problem",
             "Promote to problem until",
             "Promote to inactive problem"
@@ -58,7 +139,6 @@
           "canConditional": true,
           "dependsOn": false,
           "options": [
-            "skip",
             "Put in the summary",
             "Put in summary until",
             "Put in inactive summary"
@@ -87,31 +167,108 @@
       "value": [
         {
           "id": "XaKqd",
+          "badge": "XaKqd",
           "child": "XaKqd",
+          "title": "Letter Received",
           "c_term": "Letter Received",
-          "addCode": false,
-          "add_date": false,
+          "add_code": "false",
           "put_summary": "",
           "attach_problem": false,
           "create_problem": false,
           "forced_mappings": "",
           "promote_problem": "",
           "recipient_notes": "",
-          "problem_severity": ""
+          "problem_severity": "",
+          "add_read_code_date": {
+            "primaryValue": "true",
+            "read_code_date_type": "var(incident_date)"
+          }
         },
         {
-          "id": "XaBnr",
-          "child": "XaBnr",
-          "c_term": "Screening, monitoring and surveillance",
-          "addCode": true,
-          "add_date": true,
+          "id": "Xaang",
+          "badge": "Xaang",
+          "child": "Xaang",
+          "title": "Left Early",
+          "c_term": "Left Early",
+          "add_code": {
+            "else": {
+              "value": "false",
+              "isKilled": false,
+              "batch_name": "",
+              "recipient_notes": "",
+              "matrixAssignments": {
+
+              }
+            },
+            "type": "cascading-advanced",
+            "clauses": [
+              {
+                "rules": [
+                  {
+                    "id": "fc06dec4-b8fa-4be2-ab85-e7bc93835dc7",
+                    "type": "condition",
+                    "field": "var(left_early)",
+                    "value": "true",
+                    "operator": "contains",
+                    "caseSensitive": false
+                  }
+                ],
+                "outcome": {
+                  "value": "true",
+                  "isKilled": false,
+                  "batch_name": "",
+                  "recipient_notes": "",
+                  "matrixAssignments": {
+
+                  }
+                },
+                "rootLogicType": "AND"
+              }
+            ]
+          },
           "put_summary": "skip",
           "attach_problem": false,
           "create_problem": false,
           "forced_mappings": "skip",
           "promote_problem": "skip",
+          "recipient_notes": "Left Early Detected",
+          "problem_severity": "",
+          "add_read_code_date": {
+            "primaryValue": "true",
+            "read_code_date_type": "var(incident_date)"
+          }
+        },
+        {
+          "id": "8H2..",
+          "badge": "8H2..",
+          "child": "8H2..",
+          "title": "Admitted",
+          "c_term": "Admitted",
+          "add_code": "true",
+          "put_summary": "",
+          "attach_problem": "true",
+          "create_problem": "true",
+          "forced_mappings": "skip",
+          "promote_problem": "",
           "recipient_notes": "skip",
-          "problem_severity": ""
+          "problem_severity": "Minor",
+          "add_read_code_date": false
+        },
+        {
+          "id": "XaQzu",
+          "badge": "XaQzu",
+          "child": "XaQzu",
+          "title": "OOH report",
+          "c_term": "OOH report",
+          "add_code": "true",
+          "put_summary": "",
+          "attach_problem": false,
+          "create_problem": "true",
+          "forced_mappings": "skip",
+          "promote_problem": "",
+          "recipient_notes": "skip",
+          "problem_severity": "Minor",
+          "add_read_code_date": false
         }
       ]
     },
@@ -138,12 +295,12 @@
         {
           "id": "Left",
           "side": "Left",
-          "mappings": "l, le, left, lt"
+          "mappings": "l, le, left"
         },
         {
           "id": "Right",
           "side": "Right",
-          "mappings": "r, re, right, rt"
+          "mappings": "r, ri, right"
         },
         {
           "id": "Bilateral",
@@ -174,14 +331,14 @@
           "dependsOn": "add_metric"
         },
         {
-          "id": "add_date",
+          "id": "add_metric_date",
           "canConditional": true,
           "dependsOn": false
         },
         {
-          "id": "date_type",
+          "id": "metrics_date_type",
           "canConditional": true,
-          "dependsOn": "add_date",
+          "dependsOn": "add_metric_date",
           "options": [
             {
               "id": "letter_date",
@@ -205,15 +362,17 @@
         {
           "id": "blood_pressure",
           "metric": "blood_pressure",
-          "add_date": false,
-          "date_type": "",
           "add_metric": true,
-          "metric_codes": "2469/246A."
+          "metric_codes": "2469/246A.",
+          "add_metric_date": false,
+          "metrics_date_type": ""
         },
         {
           "id": "weight",
           "metric": "weight",
-          "add_date": {
+          "add_metric": true,
+          "metric_codes": "227..",
+          "add_metric_date": {
             "else": {
               "value": "false",
               "isKilled": false,
@@ -228,7 +387,7 @@
               {
                 "rules": [
                   {
-                    "id": "cb998578-a838-47fc-ad58-96bd2bd9e223",
+                    "id": "22b13ff8-2c07-4b45-9d26-42326d7b4797",
                     "type": "condition",
                     "field": "var(weight_date)",
                     "value": "",
@@ -249,58 +408,56 @@
               }
             ]
           },
-          "date_type": "var(weight_date)",
-          "add_metric": true,
-          "metric_codes": "227.."
+          "metrics_date_type": "var(weight_date)"
         },
         {
           "id": "height",
           "metric": "height",
-          "add_date": false,
-          "date_type": "",
           "add_metric": true,
-          "metric_codes": "229.."
+          "metric_codes": "229..",
+          "add_metric_date": false,
+          "metrics_date_type": ""
         },
         {
           "id": "bmi",
           "metric": "bmi",
-          "add_date": false,
-          "date_type": "",
           "add_metric": true,
-          "metric_codes": "22K.."
+          "metric_codes": "22K..",
+          "add_metric_date": false,
+          "metrics_date_type": ""
         },
         {
           "id": "heart_rate",
           "metric": "heart_rate",
-          "add_date": false,
-          "date_type": "",
           "add_metric": false,
-          "metric_codes": ""
+          "metric_codes": "",
+          "add_metric_date": false,
+          "metrics_date_type": ""
         },
         {
           "id": "o2_level",
           "metric": "o2_level",
-          "add_date": false,
-          "date_type": "",
           "add_metric": false,
-          "metric_codes": ""
+          "metric_codes": "",
+          "add_metric_date": false,
+          "metrics_date_type": ""
         },
         {
           "id": "smoker",
           "metric": "smoker",
-          "add_date": false,
-          "date_type": "",
           "add_metric": false,
-          "metric_codes": ""
+          "metric_codes": "",
+          "add_metric_date": false,
+          "metrics_date_type": ""
         }
       ]
     }
   },
   "assignment_rules": {
     "forwardLetter": {
-      "primaryValue": "false",
-      "forwarding_to": "",
-      "forwarding_type": ""
+      "primaryValue": "true",
+      "forwarding_to": "Kynoby Coding",
+      "forwarding_type": "Group"
     },
     "choose_flag": {
       "flag_color": "",
@@ -309,9 +466,44 @@
     "notes_and_id": "var(letter_id)"
   },
   "letter_type_rule": {
-    "letter_type": "var(letter_type)",
+    "letter_type": {
+      "else": {
+        "value": "var(letter_type)",
+        "isKilled": false,
+        "batch_name": "",
+        "recipient_notes": "",
+        "matrixAssignments": {
+
+        }
+      },
+      "type": "cascading-advanced",
+      "clauses": [
+        {
+          "rules": [
+            {
+              "id": "323ca4c9-4445-4e61-93ed-fd79f1aed094",
+              "type": "condition",
+              "field": "hospital_name",
+              "value": "York",
+              "operator": "contains",
+              "caseSensitive": false
+            }
+          ],
+          "outcome": {
+            "value": "York Hospital",
+            "isKilled": false,
+            "batch_name": "",
+            "recipient_notes": "",
+            "matrixAssignments": {
+
+            }
+          },
+          "rootLogicType": "AND"
+        }
+      ]
+    },
     "letter_date": "var(incident_date)",
-    "hospital_name": "NHS111",
+    "hospital_name": "var(hospital_name)",
     "department": "skip"
   }
 }

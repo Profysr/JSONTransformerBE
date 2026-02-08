@@ -49,18 +49,22 @@ const splitBP = (
 
 const createMetricObj = (rowContext, rules, context, logPrefix = null) => {
   const defaultTemplate = {
-    cTerm: { field: "metricName" },
+    metric_name: { field: "metricName" },
     value: {
       field: "rawValue",
       transform: "extractNumeric",
     },
-    addDate: {
-      field: "add_date",
+    add_metric_date: {
+      field: "add_metric_date",
       transform: ["toBoolean", "toString"],
     },
-    metricDate: {
-      field: "date_type",
-      condition: { field: "add_date", operator: "equals", value: "true" },
+    metric_date: {
+      field: "metrics_date_type",
+      condition: {
+        field: "add_metric_date",
+        operator: "equals",
+        value: "true",
+      },
     },
     child: { field: "metric_codes" },
   };
@@ -132,8 +136,8 @@ const executeMetricTransformation = (
     metricName,
     rawValue,
     metric_codes: processedRow.metric_codes,
-    add_date: processedRow.add_date,
-    date_type: processedRow.date_type,
+    add_metric_date: processedRow.add_metric_date,
+    metrics_date_type: processedRow.metrics_date_type,
   };
 
   const isBP = ["blood_pressure", "bp"].includes(metricName.toLowerCase());

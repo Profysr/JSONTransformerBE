@@ -102,7 +102,7 @@ const processField = (field, fieldId, fieldLogId) => {
   let valueToInclude = field.value;
 
   /** Separate method for table. Using same for the rest types */
-  if (field.type === "table") {
+  if (field.type === "table" || field.type === "cards") {
     try {
       const processedRows = processTableValue(
         field.value,

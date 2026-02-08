@@ -1,10 +1,11 @@
 import logger from "../../shared/logger.js";
+import { isEmpty } from "../../shared/utils/generalUtils.js";
 import { applyTemplate } from "../engineFunctions/TemplateEngine.js";
 import { applyRule } from "../evaluators/ApplyRule.js";
 import { processTableRules } from "../evaluators/tableProcessor.js";
 
 // ==================
-// 1 Laterality Mapping Logic
+// 1. Laterality Mapping Logic
 // ==================
 const getLateralityMappings = (rules) => {
   const mappingMap = new Map();
@@ -31,63 +32,85 @@ const applyLateralityMapping = (comment, mappingMap) => {
     return comment;
 
   const words = comment.split(/(\b|\s+|[,.;:!])/);
-  const transformed = words.map((word) => {
-    const key = word.trim().toLowerCase();
-    if (mappingMap.has(key)) {
-      return mappingMap.get(key);
-    }
-    return word;
-  });
-
-  return transformed.join("");
+  return words
+    .map((word) => {
+      const key = word.trim().toLowerCase();
+      return mappingMap.has(key) ? mappingMap.get(key) : word;
+    })
+    .join("");
 };
 
 // ==================
-// 2 Forced Mapping Logic
+// 2. Forced Mapping Logic
 // ==================
-
 const applyForcedMappings = (codesMap, mappings) => {
-  mappings.forEach((mapping) => {
-    const codeObj = codesMap.get(mapping.from);
-    if (codeObj) {
-      logger.info(
-        `[ReadCodes] Applying forced mapping for code: ${mapping.from} -> ${mapping.to}`,
-      );
-      codeObj.child = mapping.to;
-      codesMap.delete(mapping.from);
-      codesMap.set(mapping.to, codeObj);
-    }
+  mappings.forEach(({ from, to }) => {
+    const codeObj = codesMap.get(from);
+    if (!codeObj) return;
+
+    logger.info(`[ReadCodes] Forced mapping: ${from} → ${to}`);
+    codeObj.child = to;
+    codesMap.delete(from);
+    codesMap.set(to, codeObj);
   });
 };
 
 // ==================
-// 3 Base Object Builder
+// 3. Base Object Builders
 // ==================
 
-const buildBaseObj = (data, rules, context) => {
+const buildReadCodeObj = (data, rules, context) => {
+  const template = {
+    child: { field: "child" },
+    snomed_code: { field: "snomed_code" },
+    comments: { field: "comments" },
+    add_start_date: { field: "add_read_code_date" },
+    start_date: {
+      field: "read_code_date_type",
+      condition: { field: "add_read_code_date", operator: "contains", value: "true" },
+    },
+
+    promote_problem: { field: "promote_problem" },
+    put_summary: { field: "put_summary" },
+    problem_severity: { field: "problem_severity" },
+
+    promote_until_duration: { field: "promote_until_duration" },
+    summary_until_duration: { field: "summary_until_duration" },
+  };
+
+  const obj = applyTemplate(template, data, context);
+
+  if (obj.promote_until_duration || obj.summary_until_duration) {
+    obj.add_read_code_expiry = true;
+  }
+
+  return obj;
+};
+
+const buildCreateProblemObj = (data, rules, context) => {
   const template = {
     child: { field: "child" },
     comments: { field: "comments" },
-    addStartDate: { field: "add_date" },
-    startDate: {
-      field: "date_type",
-      condition: { field: "add_date", operator: "contains", value: "true" },
+    add_start_date: { field: "add_read_code_date" },
+    start_date: {
+      field: "read_code_date_type",
+      condition: { field: "add_read_code_date", operator: "contains", value: "true" },
     },
-    promoteProblem: { field: "promote_problem" },
-    putSummary: { field: "put_summary" },
-    problemSeverity: {
-      field: "problem_severity",
-      transform: "mapSeverity",
+    problem_severity: { field: "problem_severity" },
+    add_problem_end_date: { field: "add_problem_end_date" },
+    problem_end_date_duration: {
+      field: "problem_end_date_duration",
+      condition: { field: "add_problem_end_date", operator: "contains", value: "true" },
     },
+    use_inactive: { field: "use_inactive" },
   };
 
   return applyTemplate(template, data, context);
 };
 
 // ==================
-// 4 Updates the codesMap based on the specific_codes table
+// 4. Specific Codes Table Processing
 // ==================
-
 const updateCodesMapFromSpecificCodes = (
   inputData,
   specificCodesRules,
@@ -98,104 +121,170 @@ const updateCodesMapFromSpecificCodes = (
   if (!specificCodesRules) return;
 
   processTableRules(inputData, specificCodesRules, {
-    sectionKey: "ReadCodes:specific_codes",
+    sectionKey: "Specific Codes",
     context,
-    onRowProcess: (processedRow) => {
-      const childCode = processedRow.child;
-      if (!childCode) return null;
 
-      let codeObj = codesMap.get(childCode) || { child: childCode };
+    onRowProcess: (row) => {
+      if (!row.child) return;
 
-      Object.keys(processedRow).forEach((key) => {
-        if (["id", "forced_mappings", "addCode"].includes(key)) return;
-        codeObj[key] = processedRow[key];
+      const codeObj = codesMap.get(row.child) || { child: row.child };
+      Object.entries(row).forEach(([k, v]) => {
+        if (!["id", "forced_mappings"].includes(k)) codeObj[k] = v;
       });
 
+      codeObj.add_code = true;
+
       if (
-        processedRow.forced_mappings &&
-        processedRow.forced_mappings !== childCode &&
-        processedRow.forced_mappings !== "skip"
+        row.forced_mappings &&
+        row.forced_mappings !== row.child &&
+        row.forced_mappings !== "skip"
       ) {
-        pendingForcedMappings.push({
-          from: childCode,
-          to: processedRow.forced_mappings,
-        });
+        pendingForcedMappings.push({ from: row.child, to: row.forced_mappings });
       }
 
-      codesMap.set(childCode, codeObj);
-      return null;
+      codesMap.set(row.child, codeObj);
+    },
+
+    onRowSkip: (row) => {
+      if (!row.child) return;
+      const codeObj = codesMap.get(row.child) || { child: row.child };
+      codeObj.add_code = false;
+      codesMap.set(row.child, codeObj);
     },
   });
-
-  if (pendingForcedMappings.length > 0) {
-    applyForcedMappings(codesMap, pendingForcedMappings);
-  }
 };
 
 // ==================
-// 5 Code Entry Execution
+// 5. Helpers
 // ==================
-/**
- * Processes an individual code entry and determines its destination
- */
-const processCodeEntry = (codeData, childCode, rules, context, options) => {
-  const { shouldIncludeExisting, lateralityMap, problemsCsv, results } =
-    options;
+const isTrue = (v) => v === true || v === "true";
+const isFalse = (v) => v === false || v === "false";
 
-  if (codeData.comments) {
-    codeData.comments = applyLateralityMapping(
-      codeData.comments,
-      lateralityMap,
-    );
+const resolveProblemFlag = ({ isDiagnosis, globalValue, rowValue }) => {
+  if (!isEmpty(rowValue)) {
+    return isTrue(rowValue);
   }
+  if (!isDiagnosis) return false;
+  return globalValue;
+};
 
-  const tableRow =
-    rules.specific_codes?.value?.find((r) => r.child === childCode) || {};
+const hasSpecialReadBehavior = (codeData) =>
+  (codeData.promote_problem && codeData.promote_problem !== "skip") ||
+  (codeData.put_summary && codeData.put_summary !== "skip");
 
-  const isWay1 =
-    tableRow.addCode === true ||
-    (shouldIncludeExisting && tableRow.addCode !== false);
-  const isWay2 =
-    tableRow.promote_problem ||
-    tableRow.put_summary ||
-    tableRow.problem_severity;
+// ==================
+// 6. CLASSIFY READ CODES
+// ==================
+const classifyReadCodes = (
+  codesMap,
+  rules,
+  results,
+  pendingProblemAttachments,
+  context,
+) => {
+  const globalAttach = isTrue(rules.attach_problem);
+  const globalCreate = isTrue(rules.create_problem);
 
-  if (isWay1 || isWay2) {
-    const codeObj = buildBaseObj(codeData, rules, context);
-    results.readCodes.push(codeObj);
-  }
+  logger.info(`[ReadCodes] Total codes in map: ${codesMap.size}. Starting classification.`);
 
-  if (tableRow.attach_problem) {
-    results.download_problems_csv = true;
+  codesMap.forEach((codeData, childCode) => {
+    if (isFalse(codeData.add_code)) return;
 
-    if (problemsCsv.length > 0) {
-      const matchingIndex = problemsCsv.findIndex(
-        (p) =>
-          p.code === childCode ||
-          p.readCode === childCode ||
-          p.child === childCode,
-      );
+    const isDiagnosis = (codeData.type || "").toLowerCase() === "diagnosis";
 
-      if (matchingIndex !== -1) {
-        results.attachProblems.push(matchingIndex);
-      } else if (tableRow.create_problem) {
-        results.createProblems.push(buildBaseObj(codeData, rules, context));
-      }
-    } else {
-      logger.warn(
-        `[ReadCodes][${childCode}] Code requires matching but 'problems_csv' is missing from patient data.`,
-      );
+    const shouldAttachProblem = resolveProblemFlag({
+      isDiagnosis,
+      globalValue: globalAttach,
+      rowValue: codeData.attach_problem,
+    });
+
+    const allowProblemCreation = resolveProblemFlag({
+      isDiagnosis,
+      globalValue: globalCreate,
+      rowValue: codeData.create_problem,
+    });
+
+    const allowReadCodeSpecial = hasSpecialReadBehavior(codeData);
+
+    logger.info(`[ReadCodes][${childCode}] shouldAttach: ${shouldAttachProblem}, allowCreate: ${allowProblemCreation}, isSpecial: ${allowReadCodeSpecial}`);
+
+    // 6.1 Attach-first path (deferred resolution)
+    if (shouldAttachProblem) {
+      pendingProblemAttachments.push({
+        childCode,
+        codeData,
+        attachIfExists: true,
+        allowProblemCreation,
+        allowReadCodeSpecial,
+      });
+      return;
     }
-  } else if (tableRow.create_problem) {
-    results.createProblems.push(buildBaseObj(codeData, rules, context));
-  }
+
+    // 6.2 Direct create problem
+    if (allowProblemCreation && !allowReadCodeSpecial) {
+      results.createProblems.push(
+        buildCreateProblemObj(codeData, rules, context),
+      );
+      return;
+    }
+
+    // 6.3 Read code (special or normal)
+    results.readCodes.push(
+      buildReadCodeObj(codeData, rules, context),
+    );
+  });
 };
 
 // ==================
-// 6 Main Handler
+// 7. Resolve Attachments
+// ==================
+const processProblemAttachments = (
+  results,
+  pendingProblemAttachments,
+  problemsCsv,
+  rules,
+  context,
+) => {
+  // 1. If there are no pending problem attachments, return.
+  if (pendingProblemAttachments.length === 0) return;
+
+  // 2. If there are no problems in the CSV, return.
+  if (!problemsCsv || problemsCsv.length === 0) {
+    results.download_problems_csv = true;
+    return;
+  }
+
+  // 3. Iterate over pending problem attachments.
+  pendingProblemAttachments.forEach(
+    ({ childCode, codeData, allowProblemCreation, allowReadCodeSpecial }) => {
+      const index = problemsCsv.findIndex(
+        (p) => p.code === childCode || p.readCode === childCode || p.child === childCode,
+      );
+
+      if (index !== -1) {
+        results.attachProblems.push(index);
+        return;
+      }
+
+      if (allowReadCodeSpecial) {
+        results.readCodes.push(
+          buildReadCodeObj(codeData, rules, context),
+        );
+      } else if (allowProblemCreation) {
+        results.createProblems.push(
+          buildCreateProblemObj(codeData, rules, context),
+        );
+      }
+    },
+  );
+};
+
+// ==================
+// 8. Main Handler
 // ==================
 export const processReadCodes = (inputData, rules, context) => {
-  logger.info("[ReadCodes] Starting analysis of letter codes.");
+  logger.info("[ReadCodes] Starting analysis.");
+  logger.info(`[ReadCodes] Input letter codes count: ${inputData.letter_codes_list?.length || 0}`);
 
   const results = {
     readCodes: [],
@@ -203,29 +292,21 @@ export const processReadCodes = (inputData, rules, context) => {
     attachProblems: [],
     download_problems_csv: false,
   };
-  const pendingForcedMappings = [];
-  const lateralityMap = getLateralityMappings(rules);
 
-  const existingCodes = inputData.letter_codes_list || [];
+  // 1. Setting incoming codes
   const codesMap = new Map();
-  existingCodes.forEach((c) => {
-    if (c.child) codesMap.set(c.child, { ...c });
-  });
-
   const useExisting =
     context.getCandidate("add_readcodes") ??
     applyRule(inputData, rules.add_readcodes, "add_readcodes", {}, context);
-  const shouldIncludeExisting = !(
-    useExisting == "false" || useExisting == false
-  );
 
-  if (!shouldIncludeExisting) {
-    logger.info(
-      "[ReadCodes] Focusing only on 'specific_codes' table (existing codes ignored).",
-    );
-    codesMap.clear();
+  if (!isFalse(useExisting)) {
+    (inputData.letter_codes_list || []).forEach((c) => {
+      if (c.child) codesMap.set(c.child, { ...c });
+    });
   }
 
+  // 2. Processing specific codes table
+  const pendingForcedMappings = [];
   updateCodesMapFromSpecificCodes(
     inputData,
     rules.specific_codes,
@@ -234,27 +315,36 @@ export const processReadCodes = (inputData, rules, context) => {
     context,
   );
 
-  const problemsCsv = inputData.problems_csv || [];
-  codesMap.forEach((codeData, childCode) => {
-    processCodeEntry(codeData, childCode, rules, context, {
-      shouldIncludeExisting,
-      lateralityMap,
-      problemsCsv,
-      results,
+  const lateralityMap = getLateralityMappings(rules);
+  if (lateralityMap.size > 0) {
+    codesMap.forEach((c) => {
+      if (!isEmpty(c.comments)) {
+        c.comments = applyLateralityMapping(c.comments, lateralityMap);
+      }
     });
-  });
+  }
+
+  if (pendingForcedMappings.length > 0) {
+    applyForcedMappings(codesMap, pendingForcedMappings);
+  }
+
+  // 3. Classifying read codes
+  const pendingProblemAttachments = [];
+  classifyReadCodes(codesMap, rules, results, pendingProblemAttachments, context);
+
+  // 4. Processing problem attachments
+  const problemsCsv = inputData.problems_csv || [];
+  processProblemAttachments(
+    results,
+    pendingProblemAttachments,
+    problemsCsv,
+    rules,
+    context,
+  );
 
   context.addCandidate("readCodes", results.readCodes, "section:readCodes");
-  context.addCandidate(
-    "createProblems",
-    results.createProblems,
-    "section:readCodes",
-  );
-  context.addCandidate(
-    "attachProblems",
-    results.attachProblems,
-    "section:readCodes",
-  );
+  context.addCandidate("createProblems", results.createProblems, "section:readCodes");
+  context.addCandidate("attachProblems", results.attachProblems, "section:readCodes");
   context.addCandidate(
     "download_problems_csv",
     results.download_problems_csv,
@@ -262,6 +352,8 @@ export const processReadCodes = (inputData, rules, context) => {
   );
 
   logger.info(
-    `[ReadCodes] Analysis completed. Results: ${results.readCodes.length} codes, ${results.createProblems.length} new problems, ${results.attachProblems.length} attached problems.`,
+    `[ReadCodes] Done → ${results.readCodes.length} read codes, ` +
+    `${results.createProblems.length} problems created, ` +
+    `${results.attachProblems.length} attached.`,
   );
 };

@@ -67,10 +67,12 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
 
   for (let index = 0; index < rows.length; index++) {
     const row = rows[index];
+
     const rowId =
       primaryKeyCol && row[primaryKeyCol]
         ? row[primaryKeyCol]
         : `Row ${index + 1}`;
+
     const logPrefix = `[${sectionKey}][${rowId}]`;
 
     // a. Evaluate parentField logic
@@ -109,7 +111,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
 
     for (const key of Object.keys(row)) {
       if (key === parentFieldCol || key === primaryKeyCol) continue;
-      const val = evaluateField(key, row[key], row, logPrefix);
+      const val = evaluateField(key, row[key], processedRow, logPrefix);
 
       if (isKilled(val)) {
         rowKilled = true;
@@ -141,6 +143,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
       index,
     });
 
+
     if (Array.isArray(outcome)) {
       results.push(...outcome);
     } else if (outcome) {
@@ -148,5 +151,6 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
     }
   }
 
+  if (results.length > 0) logger.info(`Processed ${results.length} no of rows successfully`);
   return results;
 };
