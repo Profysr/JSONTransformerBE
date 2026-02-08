@@ -7,15 +7,17 @@ import { trimString } from "../../shared/utils/generalUtils.js";
 // ==================
 // 1 Helpers & Logging
 // ==================
-const displayLogs = (msg, type = "info") => {
+const displayLogs = (msg, type = "info", meta = {}) => {
   if (CONFIG.nodeEnv.includes("production")) return;
 
+  const logMeta = { sectionKey: "general", functionName: "rulesDeriver", ...meta };
+
   if (type === "info") {
-    logger.info(msg);
+    logger.info(msg, logMeta);
   } else if (type === "error") {
-    logger.log("error", msg);
+    logger.error(msg, logMeta);
   } else if (type === "warn") {
-    logger.warn(msg);
+    logger.warn(msg, logMeta);
   }
 };
 
@@ -69,6 +71,7 @@ const processTableValue = (rows, columns, fieldId) => {
           displayLogs(
             `[Table: ${fieldId}][Row: ${index}] Skipping column '${colKey}' as its parent '${col.dependsOn}' has falsy value ('${depValue}')`,
             "info",
+            { fieldKey: fieldId }
           );
           cleanRow[colKey] = "";
           continue;
@@ -95,7 +98,7 @@ const processTableValue = (rows, columns, fieldId) => {
  */
 const processField = (field, fieldId, fieldLogId) => {
   if (field.isActive === false) {
-    displayLogs(`[${fieldLogId}] Skipped: Inactive`, "info");
+    displayLogs(`[${fieldLogId}] Skipped: Inactive`, "info", { fieldKey: fieldId });
     return undefined;
   }
 
@@ -114,6 +117,7 @@ const processField = (field, fieldId, fieldLogId) => {
         displayLogs(
           `[${fieldLogId}] Table result empty, skipping field.`,
           "info",
+          { fieldKey: fieldId }
         );
         return undefined;
       }
@@ -131,9 +135,9 @@ const processField = (field, fieldId, fieldLogId) => {
 
       valueToInclude = { columns, value: processedRows };
     } catch (tableErr) {
-      logger.log(
-        "error",
+      logger.error(
         `Failed to process table ${fieldId}: ${tableErr.message}`,
+        { sectionKey: "general", functionName: "processField", fieldKey: fieldId, err: tableErr }
       );
       return undefined;
     }
@@ -176,7 +180,7 @@ const processSection = (key, section) => {
     if (valueToInclude !== undefined) {
       sectionData[fieldId] = valueToInclude;
       hasData = true;
-      displayLogs(`[${fieldLogId}] Added to output`, "info");
+      displayLogs(`[${fieldLogId}] Added to output`, "info", { fieldKey: fieldId });
     }
   });
 

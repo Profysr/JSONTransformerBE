@@ -1,4 +1,3 @@
-import { isEmpty } from "../../shared/utils/generalUtils.js";
 import { applyRule } from "../evaluators/ApplyRule.js";
 import { handleRuleResult, isTruthy } from "../utils/transformationUtils.js";
 
@@ -20,7 +19,7 @@ export const processExceptionRules = (inputData, rules, context) => {
       continue;
     }
 
-    if (handleRuleResult(fieldKey, derivedValue, context, "section:exception"))
+    if (handleRuleResult(fieldKey, derivedValue, context, "section:exception_json"))
       return;
   }
 };

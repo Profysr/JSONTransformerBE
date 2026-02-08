@@ -20,15 +20,20 @@ class BatchLogger {
   }
 
   _formatLog(level, message, meta) {
+    const { sectionKey, functionName, fieldKey, ...restMeta } = meta || {};
     const logEntry = {
       level: level,
       message: message,
-      meta: { ...meta },
+      meta: restMeta,
     };
 
+    if (sectionKey) logEntry.sectionKey = sectionKey;
+    if (functionName) logEntry.functionName = functionName;
+    if (fieldKey) logEntry.fieldKey = fieldKey;
+
     // Handle error objects if passed in meta for console output
-    if (meta && meta.err instanceof Error) {
-      logEntry.stack = meta.err.stack;
+    if (restMeta && restMeta.err instanceof Error) {
+      logEntry.stack = restMeta.err.stack;
     }
 
     return logEntry;
@@ -38,19 +43,19 @@ class BatchLogger {
    * Handles immediate console output for both environments.
    */
   _logToConsole(logEntry) {
-    const timestamp = new Date().toISOString();
-    const { level, message, stack, meta } = logEntry;
+    const { level, message, stack, meta, sectionKey, functionName, fieldKey } = logEntry;
 
     if (this.isProduction) {
-      // Production: Output a concise, stringified version
-      console.log(JSON.stringify({ timestamp, level, message, meta }));
+      console.log(JSON.stringify({ level, sectionKey, functionName, fieldKey, message, meta }));
     } else {
       // Development: Output human-readable format
-      let base = `[${timestamp}] [${level.toUpperCase()}]: ${stack || message}`;
+      const sectionTag = sectionKey ? `[${sectionKey}] ` : "";
+      const functionTag = functionName ? `[${functionName}] ` : "";
+      const fieldTag = fieldKey ? `[${fieldKey}] ` : "";
+      let base = `${sectionTag}${functionTag}${fieldTag}[${level.toUpperCase()}]: ${stack || message}`;
 
       if (meta && Object.keys(meta).length > 0) {
-        // Remove 'err' from meta for cleaner printing if stack is already present
-        const { err, ...cleanMeta } = meta;
+        const { err: _err, ...cleanMeta } = meta;
         if (Object.keys(cleanMeta).length > 0) {
           base += ` | Meta: ${JSON.stringify(cleanMeta, null, 2)}`;
         }
@@ -76,9 +81,12 @@ class BatchLogger {
       const bufferEntry = {
         level: logEntry.level,
         message: logEntry.message,
+        sectionKey: logEntry.sectionKey,
+        functionName: logEntry.functionName,
+        fieldKey: logEntry.fieldKey
       };
 
-      if (Object.keys(logEntry.meta).length > 0) {
+      if (logEntry.meta && Object.keys(logEntry.meta).length > 0) {
         bufferEntry["meta"] = logEntry.meta;
       }
 
@@ -123,13 +131,11 @@ class BatchLogger {
       return;
     }
 
-    const logsToSend = this.logBuffer;
-
     const payload = {
       letter_type: letter_type,
       nhs_number: nhs_id,
       letter_id,
-      processing_logs: logsToSend,
+      processing_logs: this.logBuffer,
     };
 
     // Clear the buffer immediately before the network call

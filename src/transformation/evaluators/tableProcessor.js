@@ -55,7 +55,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
   const primaryKeyCol = columns.find((c) => c.isPrimaryKey)?.id;
   const parentFieldCol = columns.find((c) => c.parentField)?.id;
 
-  logger.info(`[${sectionKey}] Starting to evaluate ${rows.length} rules.`);
+  logger.info(`Starting to evaluate ${rows.length} rules.`, { sectionKey, functionName: "processTableRules" });
 
   const evaluateField = createFieldEvaluator(
     metaMap,
@@ -86,7 +86,8 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
 
       if (isKilled(shouldAddValue)) {
         logger.warn(
-          `${logPrefix} Aborted: Parent field triggered a termination (KILL).`,
+          "Aborted: Parent field triggered a termination (KILL).",
+          { sectionKey, functionName: "processTableRules", fieldKey: rowId }
         );
         return { ...shouldAddValue, sectionKey, rowIdx: index };
       }
@@ -97,7 +98,8 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         shouldAddValue == ""
       ) {
         logger.info(
-          `${logPrefix} Skipped: Parent field '${parentFieldCol}' is not active.`,
+          `Skipped: Parent field '${parentFieldCol}' is not active.`,
+          { sectionKey, functionName: "processTableRules", fieldKey: rowId }
         );
         if (onRowSkip) onRowSkip(row, inputData, { index });
         continue;
@@ -123,7 +125,8 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
 
     if (rowKilled) {
       logger.warn(
-        `${logPrefix} Aborted: Field '${killResult.field}' triggered a termination (KILL).`,
+        `Aborted: Field '${killResult.field}' triggered a termination (KILL).`,
+        { sectionKey, functionName: "processTableRules", fieldKey: rowId }
       );
       return { ...killResult, sectionKey, rowIdx: index };
     }
@@ -151,6 +154,6 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
     }
   }
 
-  if (results.length > 0) logger.info(`Processed ${results.length} no of rows successfully`);
+  if (results.length > 0) logger.info(`Processed ${results.length} rows successfully.`, { sectionKey, functionName: "processTableRules" });
   return results;
 };

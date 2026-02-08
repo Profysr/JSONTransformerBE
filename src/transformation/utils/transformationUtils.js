@@ -59,8 +59,8 @@ export const isKilled = (value) => {
 // ==================
 
 export const processUnifiedValue = (fieldKey, unifiedObj, context, source, localTarget = null, options = {}) => {
-    const { addToContext = true, logPrefix = null } = options;
-    const prefix = logPrefix || `[${fieldKey}]`;
+    // const { addToContext = true, logPrefix = null } = options;
+    const { addToContext = true } = options;
     const { primaryValue, ...dependents } = unifiedObj;
 
     // 1- Add to context
@@ -92,7 +92,10 @@ export const processUnifiedValue = (fieldKey, unifiedObj, context, source, local
                 finalDepValue = resolveDeep(depValue, context?.originalInput || {}, localTarget, depKey, context);
             }
             localTarget[depKey] = finalDepValue;
-            logger.info(`${prefix} Mapped related field: ${depKey} = ${JSON.stringify(finalDepValue)}`);
+            logger.info(
+                `Mapped related field: ${depKey} = ${JSON.stringify(finalDepValue)}`,
+                { sectionKey: "general", functionName: "processUnifiedValue", fieldKey }
+            );
         }
     }
 };

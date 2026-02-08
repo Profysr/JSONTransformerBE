@@ -16,7 +16,6 @@ const evaluateTemplateCondition = (
   context = null,
   logPrefix = null,
 ) => {
-  const prefix = logPrefix || `[${ruleKey}]`;
   if (!condition) return true;
 
   if (Array.isArray(condition)) {
@@ -37,7 +36,8 @@ const evaluateTemplateCondition = (
       return func(rowData, rowData);
     } catch (error) {
       logger.warn(
-        `${prefix} Logic internal evaluation error: "${condition}". Details: ${error.message}`,
+        `Logic internal evaluation error: "${condition}". Details: ${error.message}`,
+        { sectionKey: "general", functionName: "evaluateTemplateCondition", condition, fieldKey: ruleKey }
       );
       return false;
     }
@@ -90,7 +90,7 @@ const applyTransforms = (value, transforms, context) => {
       if (fn) {
         result = fn(result, context);
       } else {
-        logger.warn(`[TemplateEngine] Transform '${t}' not found.`);
+        logger.warn(`Transform '${t}' not found.`, { sectionKey: "general", functionName: "applyTransforms", transform: t });
       }
     }
   }

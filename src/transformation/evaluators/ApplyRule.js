@@ -21,7 +21,6 @@ export const applyRule = (
   context = null,
   logPrefix = null,
 ) => {
-  const prefix = logPrefix || `[${fieldKey}]`;
 
   // 1. Check for Advanced Logic
   if (isAdvancedLogic(fieldValue)) {
@@ -36,7 +35,8 @@ export const applyRule = (
 
     if (result.isKilled) {
       logger.warn(
-        `${prefix} Rule triggered a termination (KILL). Resulting value: ${result.value}`,
+        `Rule triggered a termination (KILL). Resulting value: ${result.value}`,
+        { sectionKey: "general", functionName: "applyRule", fieldKey }
       );
       return result;
     }
@@ -60,7 +60,8 @@ export const applyRule = (
     inputData[fieldKey] !== fieldValue
   ) {
     logger.info(
-      `${prefix} Overriding existing value "${inputData[fieldKey]}" with preferred static value: "${fieldValue}"`,
+      `Overriding existing value "${inputData[fieldKey]}" with preferred static value: "${fieldValue}"`,
+      { sectionKey: "general", functionName: "applyRule", fieldKey }
     );
   }
 

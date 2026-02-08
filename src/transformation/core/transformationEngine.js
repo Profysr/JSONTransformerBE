@@ -1,19 +1,23 @@
 import logger from "../../shared/logger.js";
 import { processMetrics } from "../handlers/metrics.handler.js";
-import { processReadCodes } from "../handlers/readCodes.handler.js";
 import { processGeneralRules } from "../handlers/general.processor.js";
 import { ErrorHandler } from "../../api/middleware/errorHandler.js";
 import { sectionKeys } from "../utils/transformationUtils.js";
 import { TransformationContext } from "./TransformationContext.js";
 import { processExceptionRules } from "../handlers/exceptional.handler.js";
+import { processReadCodes } from "../handlers/read codes handler/readCodes.handler.js";
 
 // ==================
 // Transformation Engine
 // ==================
 export const transformationEngine = (inputData, configRules) => {
   const startTime = Date.now();
+  const sectionKey = "general";
+  const functionName = "transformationEngine";
+
   logger.info(
     `Starting transformation process. Identified ${Object.keys(configRules).length} configuration sections to process.`,
+    { sectionKey, functionName }
   );
 
   const context = new TransformationContext(inputData);
@@ -21,19 +25,22 @@ export const transformationEngine = (inputData, configRules) => {
   // ==================
   // Section Processing
   // ==================
-  for (const [sectionKey, sectionRules] of Object.entries(configRules)) {
+  for (const [sectionKeyEntry, sectionRules] of Object.entries(configRules)) {
     if (context.killResult) break;
 
-    logger.info(`[Section: ${sectionKey}] Beginning evaluation...`);
+    const sectionType = sectionRules.sectionKey ?? sectionKeyEntry;
+    const currentSectionKey = sectionType; // Use the specific section type as the key
+
+    logger.info("Beginning evaluation...", { sectionKey: currentSectionKey, functionName });
 
     if (!sectionRules || typeof sectionRules !== "object") {
       throw new ErrorHandler(
         400,
-        `[Section: ${sectionKey}] Configuration is invalid or missing.`,
+        "Configuration is invalid or missing.",
+        { sectionKey: currentSectionKey, functionName }
       );
     }
 
-    const sectionType = sectionRules.sectionKey ?? sectionKey;
     const sectionStart = Date.now();
 
     try {
@@ -49,29 +56,32 @@ export const transformationEngine = (inputData, configRules) => {
           break;
         default:
           if (sectionKeys.includes(sectionType)) {
-            processGeneralRules(inputData, sectionRules, context);
+            processGeneralRules(inputData, sectionRules, context, sectionType);
           } else {
             logger.warn(
-              `[Section: ${sectionKey}] Unknown section type/key. Skipping to prevent data leakage.`,
+              "Unknown section type/key. Skipping to prevent data leakage.",
+              { sectionKey: currentSectionKey, functionName }
             );
             throw new ErrorHandler(
               400,
-              `[Section: ${sectionKey}] Invalid Configuration. Section is not recognized.`,
+              "Invalid Configuration. Section is not recognized.",
+              { sectionKey: currentSectionKey, functionName }
             );
           }
       }
     } catch (err) {
       logger.error(
-        `[Section: ${sectionKey}] Failed with error: ${err.message}`,
+        `Failed with error: ${err.message}`,
+        { sectionKey: currentSectionKey, functionName, err }
       );
       throw err;
     }
 
     const sectionDuration = Date.now() - sectionStart;
-    logger.info(`[Section: ${sectionKey}] Completed in ${sectionDuration}ms.`);
+    logger.info(`Completed in ${sectionDuration}ms.`, { sectionKey: currentSectionKey, functionName });
 
     if (context.killResult) {
-      logger.warn("Transformation aborted by kill signal.");
+      logger.warn("Transformation aborted by kill signal.", { sectionKey: currentSectionKey, functionName });
       break;
     }
   }
@@ -80,13 +90,14 @@ export const transformationEngine = (inputData, configRules) => {
   // Final Output Resolution
   // ==================
   const finalOutput = context.getFinalOutput();
-  const candidates = context.viewCandidates?.(true) ?? []; // ✅ safer than calling private _viewCandidates
+  const candidates = context._viewCandidates?.(true) ?? [];
   const totalDuration = Date.now() - startTime;
 
   logger.info(
     `Transformation lifecycle finished successfully in ${totalDuration}ms.`,
+    { sectionKey, functionName }
   );
-  logger.debug("Candidates (debug only):", candidates);
+  logger.debug("Candidates:", { candidates, sectionKey, functionName });
 
   return finalOutput;
 };

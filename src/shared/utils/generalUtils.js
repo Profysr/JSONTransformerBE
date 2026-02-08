@@ -34,7 +34,7 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
     if (inputVal === fieldKey) {
         const existingVal = inputData[fieldKey];
         if (typeof existingVal === "string" && existingVal.includes(`var(${fieldKey})`)) {
-            logger.warn(`[${fieldKey}] Circular reference detected in inputData for '${fieldKey}'.`);
+            logger.warn(`Circular reference detected in inputData for '${fieldKey}'.`, { sectionKey: "general", functionName: "resolveVariable", fieldKey });
             return existingVal;
         }
         return existingVal;
@@ -58,10 +58,10 @@ export const resolveVariable = (varString, inputData, localContext = {}, fieldKe
     }
 
     if (fieldVal === undefined) {
-        logger.warn(`[${fieldKey}] Field '${inputVal}' is not found in input inputData`);
+        logger.warn(`Field '${inputVal}' is not found in input inputData`, { sectionKey: "general", functionName: "resolveVariable", fieldKey });
         return false;
     } else {
-        logger.info(`[${fieldKey}] Found variable '${inputVal}' -> "${fieldVal}"`);
+        logger.info(`Found variable '${inputVal}' -> "${fieldVal}"`, { sectionKey: "general", functionName: "resolveVariable", fieldKey });
     }
 
     return fieldVal;
@@ -101,4 +101,26 @@ export const toBoolean = (value) => {
         return value.toLowerCase() === "true";
     }
     return Boolean(value);
+};
+
+// ==================
+// 5 Object Cleanup
+// ==================
+export const cleanObject = (obj) => {
+    if (obj === null || typeof obj !== "object") return obj;
+
+    if (Array.isArray(obj)) {
+        return obj
+            .map(cleanObject)
+            .filter((item) => item !== undefined && item !== null && item !== "skip");
+    }
+
+    const cleaned = {};
+    for (const [key, value] of Object.entries(obj)) {
+        const cleanedValue = cleanObject(value);
+        if (cleanedValue !== undefined && cleanedValue !== null && cleanedValue !== "skip") {
+            cleaned[key] = cleanedValue;
+        }
+    }
+    return cleaned;
 };

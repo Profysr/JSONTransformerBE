@@ -57,9 +57,8 @@ export function evaluateCondition(
   ruleKey,
   localContext = {},
   context = null,
-  logPrefix = null,
+  // logPrefix = null,
 ) {
-  const prefix = logPrefix || `[${ruleKey}]`;
   try {
     const { field, operator, value } = condition;
     const caseSensitive =
@@ -84,7 +83,8 @@ export function evaluateCondition(
 
     if (fieldVal === undefined && !["is_null", "is_empty"].includes(operator)) {
       logger.warn(
-        `${prefix} Property '${field}' was not found in either patient data or configuration row. Configuration criteria for this field will be skipped.`,
+        `Property '${field}' was not found in either patient data or configuration row. Skipping configuration criteria.`,
+        { sectionKey: "general", functionName: "evaluateCondition", field, fieldKey: ruleKey }
       );
       return false;
     }
@@ -100,7 +100,8 @@ export function evaluateCondition(
     ].includes(operator);
     if (!isUnary && isEmpty(inputVal)) {
       logger.warn(
-        `${prefix} Missing comparison value for operator '${operator}'.`,
+        `Missing comparison value for operator '${operator}'.`,
+        { sectionKey: "general", functionName: "evaluateCondition", operator, fieldKey: ruleKey }
       );
       return false;
     }
@@ -110,13 +111,14 @@ export function evaluateCondition(
     const result = !!handler(fieldVal, inputVal, prep);
 
     logger.info(
-      `${prefix} Checking if '${field}' (${fieldVal}) ${operator} '${inputVal}' ... Result: ${result}`,
+      `Checking if '${field}' (${fieldVal}) ${operator} '${inputVal}' --> Result: ${result}`,
+      { sectionKey: "general", functionName: "evaluateCondition", field, fieldKey: ruleKey }
     );
     return result;
   } catch (error) {
-    logger.log(
-      "error",
-      `${prefix} Unexpected evaluation error: ${error.message}`,
+    logger.error(
+      `Unexpected evaluation error: ${error.message}`,
+      { sectionKey: "general", functionName: "evaluateCondition", fieldKey: ruleKey, err: error }
     );
     return new ErrorHandler(
       500,

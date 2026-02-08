@@ -1,5 +1,5 @@
 import logger from "../../shared/logger.js";
-import { isEmpty, resolveDeep } from "../../shared/utils/generalUtils.js";
+import { isEmpty, cleanObject, resolveDeep } from "../../shared/utils/generalUtils.js";
 import { isUnifiedValue } from "../utils/transformationUtils.js";
 
 // ==================
@@ -47,7 +47,8 @@ export class TransformationContext {
     });
 
     logger.info(
-      `[Context] Added candidate for '${key}': ${JSON.stringify(resolvedValue)} (Source: ${source})`,
+      `Added candidate for '${key}': ${JSON.stringify(resolvedValue)} (Source: ${source})`,
+      { sectionKey: "general", functionName: "addCandidate", fieldKey: key }
     );
   }
 
@@ -109,7 +110,8 @@ export class TransformationContext {
     if (!this.killResult) {
       this.killResult = result;
       logger.warn(
-        `[Context] Transformation KILLED by ${result.field || "unknown"}.`,
+        `Transformation KILLED by ${result.field || "unknown"}.`,
+        { sectionKey: "general", functionName: "setKilled", fieldKey: result.field }
       );
     }
   }
@@ -161,13 +163,8 @@ export class TransformationContext {
       }
     }
 
-    // Delete empty or null values from the output. Keep neat and clean structure
-    const finalOutput = output;
-    Object.keys(finalOutput).forEach((key) => {
-      if (isEmpty(finalOutput[key]) || finalOutput[key] === "skip") {
-        delete finalOutput[key];
-      }
-    });
+    // Use cleanObject to recursively remove null, undefined, and 'skip' values
+    const finalOutput = cleanObject(output);
 
     // These are mandatory fields. So, if these are not present in our output, initializing those by default
     ["department", "metrics", "readCodes", "createProblems", "attachProblems"].forEach(

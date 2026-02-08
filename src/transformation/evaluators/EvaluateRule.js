@@ -26,25 +26,25 @@ export const evaluateRuleList = (
   const result =
     logicType === "OR"
       ? rules.some((rule) =>
-          evaluateRuleRecursive(
-            inputData,
-            rule,
-            fieldKey,
-            localContext,
-            context,
-            logPrefix,
-          ),
-        )
+        evaluateRuleRecursive(
+          inputData,
+          rule,
+          fieldKey,
+          localContext,
+          context,
+          logPrefix,
+        ),
+      )
       : rules.every((rule) =>
-          evaluateRuleRecursive(
-            inputData,
-            rule,
-            fieldKey,
-            localContext,
-            context,
-            logPrefix,
-          ),
-        );
+        evaluateRuleRecursive(
+          inputData,
+          rule,
+          fieldKey,
+          localContext,
+          context,
+          logPrefix,
+        ),
+      );
 
   return result;
 };
@@ -60,7 +60,8 @@ export const evaluateRuleRecursive = (
   const prefix = logPrefix || `[${fieldKey}]`;
   if (rule.type === "group") {
     logger.info(
-      `${prefix} Checking a combined rule group (Logic: ${rule.logicType})`,
+      `Checking a combined rule group (Logic: ${rule.logicType})`,
+      { sectionKey: "general", functionName: "evaluateRuleRecursive", fieldKey }
     );
 
     if (!rule.rules || !Array.isArray(rule.rules)) {
@@ -95,11 +96,11 @@ export const evaluateRuleRecursive = (
 // ==================
 // 2 Outcome Processing
 // ==================
-const evaluateClauseOutcome = (outcome, fieldKey, index, logPrefix = null) => {
-  const prefix = logPrefix || `[${fieldKey}]`;
+const evaluateClauseOutcome = (outcome, fieldKey, index) => {
   const isKilled = outcome.isKilled === true;
   logger.info(
-    `${prefix} Rule criteria met in clause ${index + 1}. Terminal (KILL): ${isKilled}`,
+    `Rule criteria met in clause ${index + 1}. Terminal (KILL): ${isKilled}`,
+    { sectionKey: "general", functionName: "evaluateClauseOutcome", fieldKey }
   );
 
   return {
@@ -131,7 +132,8 @@ export const evaluateCascadingAdvanced = (
     }
 
     logger.info(
-      `${prefix} Evaluating Clause ${index + 1} (Logic: ${clause.rootLogicType || "AND"})`,
+      `Evaluating Clause ${index + 1} (Logic: ${clause.rootLogicType || "AND"})`,
+      { sectionKey: "general", functionName: "evaluateCascadingAdvanced", fieldKey }
     );
 
     const result = evaluateRuleList(
@@ -149,10 +151,9 @@ export const evaluateCascadingAdvanced = (
         clause.outcome || {},
         fieldKey,
         index,
-        logPrefix,
       );
     } else {
-      logger.info(`${prefix} Condition not satisfied at Clause ${index + 1}`);
+      logger.info(`Condition not satisfied at Clause ${index + 1}`, { sectionKey: "general", functionName: "evaluateCascadingAdvanced", fieldKey });
     }
   }
 
@@ -161,7 +162,8 @@ export const evaluateCascadingAdvanced = (
   const elseValue = !isEmpty(elseBlock.value) ? elseBlock.value : "skip";
 
   logger.info(
-    `${prefix} No criteria met, using default value: ${elseValue}. Terminal (KILL): ${isKilled}`,
+    `No criteria met, using default value: ${elseValue}. Terminal (KILL): ${isKilled}`,
+    { sectionKey: "general", functionName: "evaluateCascadingAdvanced", fieldKey }
   );
 
   return {

@@ -17,7 +17,8 @@ const splitBP = (
   logPrefix = null,
 ) => {
   logger.info(
-    `${logPrefix || `[Metrics][${metricName}]`} Splitting Blood Pressure into separate systolic and diastolic items.`,
+    "Splitting Blood Pressure into separate systolic and diastolic items.",
+    { sectionKey: "metrics_config_rules", functionName: "splitBP", fieldKey: metricName }
   );
 
   const values = String(rawValue).split("/");
@@ -124,7 +125,8 @@ const executeMetricTransformation = (
 
   if (!metricKey) {
     logger.warn(
-      `[Metrics][${metricName}] Not found in patient data. Skipping.`,
+      "Metric not found in patient data. Skipping.",
+      { sectionKey: "metrics_config_rules", functionName: "executeMetricTransformation", fieldKey: metricName }
     );
     return null;
   }
@@ -140,7 +142,7 @@ const executeMetricTransformation = (
     metrics_date_type: processedRow.metrics_date_type,
   };
 
-  const isBP = ["blood_pressure", "bp"].includes(metricName.toLowerCase());
+  const isBP = metricName?.toLowerCase() === "bp" || metricName?.toLowerCase() === "blood_pressure";
 
   if (isBP) {
     return splitBP(
@@ -150,15 +152,13 @@ const executeMetricTransformation = (
       processedRow,
       rules,
       context,
-      `[Metrics][${metricName}]`,
     );
   } else {
-    logger.info(`[Metrics][${metricName}] Evaluated with value: ${rawValue}`);
+    logger.info(`Metric evaluated with value: ${rawValue}`, { sectionKey: "metrics_config_rules", functionName: "executeMetricTransformation", fieldKey: metricName });
     return createMetricObj(
       rowContext,
       rules,
       context,
-      `[Metrics][${metricName}]`,
     );
   }
 };
@@ -195,6 +195,7 @@ export const processMetrics = (inputData, rules, context) => {
 
   context.addCandidate("metrics", results || [], "section:metrics");
   logger.info(
-    `[Metrics] Finished processing. Total metrics identified: ${results?.length || 0}`,
+    `Finished processing. Total metrics identified: ${results?.length || 0}`,
+    { sectionKey: "metrics_config_rules", functionName: "processMetrics" }
   );
 };
