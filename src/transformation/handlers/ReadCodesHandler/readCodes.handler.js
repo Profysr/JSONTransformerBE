@@ -9,8 +9,9 @@ import {
   applyForcedMappings,
 } from "./mappings.js";
 
-import { classifyReadCodes } from "./classifiers.js";
-import { processProblemAttachments } from "./attachmentResolver.js";
+import { processProblemAttachments } from "./processProblems.js";
+import { getFeatures } from "./features.js";
+import { classifyReadCodes } from "./codesClassification.js";
 
 // ==================
 // 0. Helpers
@@ -34,7 +35,6 @@ const updateCodesMapFromSpecificCodes = (
   processTableRules(inputData, specificCodesRules, {
     sectionKey: "Specific Codes",
     context,
-
     onRowProcess: (row) => {
       if (!row.child) return;
 
@@ -44,7 +44,7 @@ const updateCodesMapFromSpecificCodes = (
       });
 
       codeObj.add_code = true;
-      
+
       if (
         row.forced_mappings &&
         row.forced_mappings !== row.child &&
@@ -66,7 +66,29 @@ const updateCodesMapFromSpecificCodes = (
 };
 
 // ==================
-// 2. Main Handler
+// 2. Pending Codes (Optimization)
+// ==================
+const handlePendingCodes = (inputData, rules, context, sectionKey, results) => {
+  const logMeta = { sectionKey, functionName: "handlePendingCodes" };
+  const pendingCodes = inputData.pendingCodes || [];
+
+  logger.info(`Optimized path: Processing ${pendingCodes.length} pending codes.`, logMeta);
+
+  // Directly pass to attachments (bypass classification)
+  const problemsCsv = inputData.problems_csv || [];
+  processProblemAttachments(
+    results,
+    pendingCodes, // Here pendingCodes acts as pendingProblemAttachments
+    problemsCsv,
+    rules,
+    context,
+    sectionKey,
+    getFeatures(inputData, rules, context, sectionKey)
+  );
+};
+
+// ==================
+// 3. Main Handler
 // ==================
 export const processReadCodes = (inputData, rules, context, sectionKey) => {
   const functionName = "processReadCodes";
@@ -74,12 +96,37 @@ export const processReadCodes = (inputData, rules, context, sectionKey) => {
 
   logger.info(`Input letter codes count: ${inputData.letter_codes_list?.length || 0}`, logMeta);
 
+  // Initialize Features
+  const features = getFeatures(inputData, rules, context, sectionKey);
+  logger.info(`Features enabled: ${JSON.stringify(features)}`, logMeta);
+
   const results = {
     readCodes: [],
     createProblems: [],
     attachProblems: [],
+    pendingCodes: [],
     download_problems_csv: false,
   };
+
+  // Optimization: Second Endpoint Path
+  if (inputData.is_pending_resolution && inputData.pendingCodes?.length > 0) {
+    handlePendingCodes(inputData, rules, context, sectionKey, results);
+
+    // Export results and exit
+    context.addCandidate("readCodes", results.readCodes, sectionKey);
+    context.addCandidate("createProblems", results.createProblems, sectionKey);
+    context.addCandidate("attachProblems", results.attachProblems, sectionKey);
+    context.addCandidate("pendingCodes", results.pendingCodes, sectionKey);
+    context.addCandidate("download_problems_csv", results.download_problems_csv, sectionKey);
+
+    logger.info(
+      `Received ${results.pendingCodes.length} pending codes and processed them → ${results.readCodes.length} read codes, ` +
+      `${results.createProblems.length} problems created, ` +
+      `${results.attachProblems.length} attached`,
+      logMeta
+    );
+    return;
+  }
 
   // 1. Setting incoming codes
   const codesMap = new Map();
@@ -119,7 +166,7 @@ export const processReadCodes = (inputData, rules, context, sectionKey) => {
 
   // 3. Classifying read codes
   const pendingProblemAttachments = [];
-  classifyReadCodes(codesMap, rules, results, pendingProblemAttachments, context, sectionKey);
+  classifyReadCodes(codesMap, rules, results, pendingProblemAttachments, context, sectionKey, features);
 
   // 4. Processing problem attachments
   const problemsCsv = inputData.problems_csv || [];
@@ -130,11 +177,13 @@ export const processReadCodes = (inputData, rules, context, sectionKey) => {
     rules,
     context,
     sectionKey,
+    features,
   );
 
   context.addCandidate("readCodes", results.readCodes, sectionKey);
   context.addCandidate("createProblems", results.createProblems, sectionKey);
   context.addCandidate("attachProblems", results.attachProblems, sectionKey);
+  context.addCandidate("pendingCodes", results.pendingCodes, sectionKey);
   context.addCandidate(
     "download_problems_csv",
     results.download_problems_csv,
@@ -144,7 +193,8 @@ export const processReadCodes = (inputData, rules, context, sectionKey) => {
   logger.info(
     `Done → ${results.readCodes.length} read codes, ` +
     `${results.createProblems.length} problems created, ` +
-    `${results.attachProblems.length} attached.`,
+    `${results.attachProblems.length} attached, ` +
+    `${results.pendingCodes.length} pending.`,
     logMeta
   );
 };

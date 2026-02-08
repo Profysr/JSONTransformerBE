@@ -5,7 +5,7 @@ import { ErrorHandler } from "../../api/middleware/errorHandler.js";
 import { sectionKeys } from "../utils/transformationUtils.js";
 import { TransformationContext } from "./TransformationContext.js";
 import { processExceptionRules } from "../handlers/exceptional.handler.js";
-import { processReadCodes } from "../handlers/read codes handler/readCodes.handler.js";
+import { processReadCodes } from "../handlers/ReadCodesHandler/readCodes.handler.js";
 
 // ==================
 // Transformation Engine
@@ -81,5 +81,6 @@ export const transformationEngine = (inputData, configRules) => {
   const candidates = context._viewCandidates?.(true) ?? [];
   logger.debug("Candidates:", { candidates });
 
-  return context.getFinalOutput();
+  const finalOutput = context.getFinalOutput();
+  return context.applyDefaultOutputs(finalOutput);
 };

@@ -16,7 +16,11 @@ export class TransformationContext {
   _isTruthy(val) {
     if (isEmpty(val)) return false;
     if (typeof val === "boolean") return val;
-    if (typeof val === "string") return val.toLowerCase() === "true";
+    if (typeof val === "string") {
+      const lower = val.toLowerCase();
+      if (lower === "false" || lower === "skip") return false;
+      return true;
+    }
     return Boolean(val);
   }
 
@@ -157,19 +161,27 @@ export class TransformationContext {
     // Use cleanObject to recursively remove null, undefined, and 'skip' values
     const finalOutput = cleanObject(output);
 
-    // These are mandatory fields. So, if these are not present in our output, initializing those by default
-    ["department", "metrics", "readCodes", "createProblems", "attachProblems"].forEach(
-      (field) => {
-        if (!finalOutput.hasOwnProperty(field)) {
-          finalOutput[field] = field == "department" ? "" : [];
-        }
-      },
-    );
-
     finalOutput["recipient_notes"] = this.recipient_notes;
     finalOutput["AddNotesToRecipient"] = this.recipient_notes.length > 0;
 
     return finalOutput;
+  }
+
+  /**
+   * Applies mandatory default fields to the output.
+   * This is typically used by the full transformation engine.
+   */
+  applyDefaultOutputs(output) {
+    if (output && output.isKilled) return output;
+
+    const defaults = ["department", "metrics", "readCodes", "createProblems", "attachProblems"];
+    defaults.forEach((field) => {
+      if (!output.hasOwnProperty(field)) {
+        output[field] = field === "department" ? "" : [];
+      }
+    });
+
+    return output;
   }
 
   // ==================

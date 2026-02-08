@@ -39,7 +39,9 @@ export const isTruthy = (value) => {
     if (isEmpty(value)) return false;
     if (typeof value === "boolean") return value;
     if (typeof value === "string") {
-        return value.toLowerCase() === "true";
+        const lower = value.toLowerCase();
+        if (lower === "false" || lower === "skip") return false;
+        return true;
     }
     if (isUnifiedValue(value)) {
         return isTruthy(value.primaryValue);

@@ -1,6 +1,6 @@
 import logger from "../../../shared/logger.js";
 import { isEmpty } from "../../../shared/utils/generalUtils.js";
-import { buildReadCodeObj, buildCreateProblemObj } from "./builders.js";
+import { buildReadCodeObj, buildCreateProblemObj } from "./codeTemplates.js";
 
 const isTrue = (v) => v === true || v === "true";
 const isFalse = (v) => v === false || v === "false";
@@ -24,6 +24,7 @@ export const classifyReadCodes = (
     pendingProblemAttachments,
     context,
     sectionKey = "",
+    features = {},
 ) => {
     const logMeta = { sectionKey, functionName: "classifyReadCodes" };
     const globalAttach = isTrue(rules.attach_problem);
@@ -37,11 +38,16 @@ export const classifyReadCodes = (
 
         const isDiagnosis = (codeData.type || "").toLowerCase() === "diagnosis";
 
-        const shouldAttachProblem = resolveProblemFlag({
+        let shouldAttachProblem = resolveProblemFlag({
             isDiagnosis,
             globalValue: globalAttach,
             rowValue: codeData.attach_problem,
         });
+
+        // 1. search_codes_in_problems: If enabled, treat EVERY code as if it should be searched in existing problems first.
+        if (features.search_codes_in_problems) {
+            shouldAttachProblem = true;
+        }
 
         const allowProblemCreation = resolveProblemFlag({
             isDiagnosis,
@@ -51,7 +57,7 @@ export const classifyReadCodes = (
 
         const allowReadCodeSpecial = hasSpecialReadBehavior(codeData);
 
-        // 6.1 Attach-first path (deferred resolution)
+        // 6.1 Attach-first path
         if (shouldAttachProblem) {
             pendingProblemAttachments.push({
                 childCode,
@@ -60,7 +66,7 @@ export const classifyReadCodes = (
                 allowProblemCreation,
                 allowReadCodeSpecial,
             });
-            logger.info(`Classification result for child ${childCode}: attachProblems (deferred)`, rowLogMeta);
+            logger.info(`Classification result for child ${childCode}: attachProblems`, rowLogMeta);
             return;
         }
 

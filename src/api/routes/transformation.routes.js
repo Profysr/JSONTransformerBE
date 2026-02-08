@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { processTransformation, processProblemResolution } from "../controllers/transformation.controller.js";
+import { processTransformation, findExistingProblems } from "../controllers/transformation.controller.js";
 import fs from "fs";
 import path from "path";
 import catchAsyncHandler from "../middleware/catchAsyncHandler.js";
@@ -19,7 +19,7 @@ router.get("/", (req, res) => {
 });
 
 router.post("/transform/:inst_id", processTransformation);
-router.post("/transform/resolve-problems/:inst_id", processProblemResolution);
+router.post("/transform/find-problems/:inst_id", findExistingProblems);
 
 
 /** Created it for testing purpose */

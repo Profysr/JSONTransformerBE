@@ -6,6 +6,8 @@ import { ErrorHandler } from "../middleware/errorHandler.js";
 import { getAccessToken } from "../../shared/providers/auth.service.js";
 import { deriveJSONRules } from "../../transformation/engineFunctions/rulesDeriver.js";
 import { transformationEngine } from "../../transformation/core/transformationEngine.js";
+import { TransformationContext } from "../../transformation/core/TransformationContext.js";
+import { processReadCodes } from "../../transformation/handlers/ReadCodesHandler/readCodes.handler.js";
 
 
 // ==================
@@ -71,13 +73,6 @@ const validateTransformationInput = (inputData) => {
   return null;
 };
 
-/**
- * Orchestrates the core transformation logic
- */
-const orchestrateTransformation = (inputData, configRules) => {
-  return transformationEngine(inputData, configRules);
-};
-
 // ==================
 // 3 Response Formatting
 // ==================
@@ -138,7 +133,7 @@ export const processTransformation = catchAsyncHandler(
         return next(new ErrorHandler(404, `No configuration rules found for inst_id: ${inst_id} and letter_type: ${letter_type}`));
       }
 
-      const output = orchestrateTransformation(inputData, configRules);
+      const output = transformationEngine(inputData, configRules);
 
       const duration = Date.now() - startTime;
       logger.info(`Total transformation process completed in ${duration}ms.`);
@@ -166,71 +161,46 @@ export const processTransformation = catchAsyncHandler(
 );
 
 // ==================
-// 5 Problem Resolution Logic
+// 5. Specialized endpoint for Read Codes Problem Resolution (Part 2)
 // ==================
-/**
- * Filters rules to only keep the Read Codes (e2e_config_json) section
- */
-const filterRulesForProblemResolution = (configRules) => {
-  let readCodesSection = configRules.e2e_config_json;
-
-  // Fallback search by sectionKey if not valid
-  if (!readCodesSection) {
-    readCodesSection = Object.values(configRules).find(r => r && r.sectionKey === "e2e_config_json");
-  }
-
-  if (!readCodesSection) return null;
-
-  return { e2e_config_json: readCodesSection };
-};
-
-/**
- * Executes the problem resolution transformation
- */
-const executeProblemResolution = (inputData, filteredRules) => {
-  return transformationEngine(inputData, filteredRules);
-};
-
-// ==================
-// 6 Problem Resolution Handler
-// ==================
-/**
- * Specialized endpoint for Read Codes Problem Resolution (Part 2)
- * Only processes the e2e_config_json section with problems_csv
- */
-export const processProblemResolution = catchAsyncHandler(
+export const findExistingProblems = catchAsyncHandler(
   async (req, res, next) => {
     const { inst_id } = req.params;
     const inputData = req.body || {};
 
-    const nhs_id = inputData?.nhs_id;
     const letter_id = inputData?.letter_id;
     const letter_type = inputData?.letter_type;
 
     logger.info("Received Problem Resolution request:", {
       inst_id,
       letter_type,
-      nhsid: nhs_id,
       letter_id,
       hasCsv: !!(inputData.problems_csv && inputData.problems_csv.length),
     });
+
+    // Signal optimized path for handlers
+    inputData.is_pending_resolution = true;
 
     try {
       if (!inputData || typeof inputData !== "object") {
         return next(new ErrorHandler(400, "Invalid input data."));
       }
 
+      /** if sheroz bhii add section based filtering, we can solely fetched e2e_config from backend directly */
       const configRules = await fetchConfigRules(inst_id, letter_type);
       if (!configRules || Object.keys(configRules).length === 0) {
         return next(new ErrorHandler(404, `No configuration rules found for inst_id: ${inst_id}`));
       }
 
-      const filteredRules = filterRulesForProblemResolution(configRules);
-      if (!filteredRules) {
+
+      const filteredRules = configRules.e2e_config_json;
+      if (!filteredRules || Object.keys(filteredRules).length === 0) {
         return next(new ErrorHandler(404, "Read Codes configuration (e2e_config_json) not found in rules."));
       }
 
-      const output = executeProblemResolution(inputData, filteredRules);
+      const context = new TransformationContext(inputData);
+      processReadCodes(inputData, filteredRules, context, "e2e_config_json");
+      const output = context.getFinalOutput();
 
       if (output instanceof ErrorHandler) {
         return next(output);

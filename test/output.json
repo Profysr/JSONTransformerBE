@@ -252,7 +252,10 @@
           "promote_problem": "",
           "recipient_notes": "skip",
           "problem_severity": "Minor",
-          "add_read_code_date": false
+          "add_read_code_date": {
+            "primaryValue": "true",
+            "read_code_date_type": "var(incident_date)"
+          }
         },
         {
           "id": "XaQzu",
@@ -269,6 +272,45 @@
           "recipient_notes": "skip",
           "problem_severity": "Minor",
           "add_read_code_date": false
+        },
+        {
+          "id": "XaBnr",
+          "child": "XaBnr",
+          "title": "Screening, monitoring and surveillance",
+          "c_term": "Screening, monitoring and surveillance",
+          "add_code": "true",
+          "put_summary": "Put in the summary",
+          "attach_problem": "true",
+          "create_problem": false,
+          "forced_mappings": "skip",
+          "promote_problem": {
+            "primaryValue": "Promote to problem until",
+            "promote_until_duration": "06"
+          },
+          "recipient_notes": "skip",
+          "problem_severity": "Major",
+          "add_read_code_date": {
+            "primaryValue": "true",
+            "read_code_date_type": "var(incident_date)"
+          }
+        },
+        {
+          "id": "Y29d6",
+          "child": "Y29d6",
+          "title": "CFS - Level 01",
+          "c_term": "CFS - Level 01",
+          "add_code": "true",
+          "put_summary": "",
+          "attach_problem": "true",
+          "create_problem": "true",
+          "forced_mappings": "skip",
+          "promote_problem": "",
+          "recipient_notes": "skip",
+          "problem_severity": "Minor",
+          "add_read_code_date": {
+            "primaryValue": "true",
+            "read_code_date_type": "var(incident_date)"
+          }
         }
       ]
     },
@@ -421,8 +463,8 @@
         {
           "id": "bmi",
           "metric": "bmi",
-          "add_metric": true,
-          "metric_codes": "22K..",
+          "add_metric": false,
+          "metric_codes": "",
           "add_metric_date": false,
           "metrics_date_type": ""
         },
@@ -490,7 +532,7 @@
             }
           ],
           "outcome": {
-            "value": "York Hospital",
+            "value": "York Ambulance Letter Type",
             "isKilled": false,
             "batch_name": "",
             "recipient_notes": "",
