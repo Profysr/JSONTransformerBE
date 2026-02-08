@@ -33,12 +33,12 @@ export const applyLateralityMapping = (comment, mappingMap) => {
         .join("");
 };
 
-export const applyForcedMappings = (codesMap, mappings) => {
+export const applyForcedMappings = (codesMap, mappings, sectionKey = "") => {
     mappings.forEach(({ from, to }) => {
         const codeObj = codesMap.get(from);
         if (!codeObj) return;
 
-        logger.info(`Forced mapping: ${from} → ${to}`, { sectionKey: "e2e_config_json", functionName: "applyForcedMappings", fieldKey: from });
+        logger.info(`Forced mapping: ${from} → ${to}`, { sectionKey, functionName: "applyForcedMappings", fieldKey: from });
         codeObj.child = to;
         codesMap.delete(from);
         codesMap.set(to, codeObj);

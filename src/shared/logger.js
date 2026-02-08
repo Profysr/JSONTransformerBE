@@ -81,9 +81,9 @@ class BatchLogger {
       const bufferEntry = {
         level: logEntry.level,
         message: logEntry.message,
-        sectionKey: logEntry.sectionKey,
-        functionName: logEntry.functionName,
-        fieldKey: logEntry.fieldKey
+        sectionKey: logEntry.sectionKey || "",
+        functionName: logEntry.functionName || "",
+        fieldKey: logEntry.fieldKey || ""
       };
 
       if (logEntry.meta && Object.keys(logEntry.meta).length > 0) {

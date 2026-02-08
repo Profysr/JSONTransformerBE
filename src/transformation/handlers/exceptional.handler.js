@@ -1,10 +1,10 @@
 import { applyRule } from "../evaluators/ApplyRule.js";
-import { handleRuleResult, isTruthy } from "../utils/transformationUtils.js";
+import { handleRuleResult } from "../utils/transformationUtils.js";
 
 // ==================
 // Exception Rules Handler
 // ==================
-export const processExceptionRules = (inputData, rules, context) => {
+export const processExceptionRules = (inputData, rules, context, sectionKey = "") => {
   for (const [fieldKey, fieldValue] of Object.entries(rules)) {
     const derivedValue = applyRule(
       inputData,
@@ -12,14 +12,10 @@ export const processExceptionRules = (inputData, rules, context) => {
       fieldKey,
       {},
       context,
+      sectionKey
     );
 
-    // Skip null, undefined, empty, "skip", false, 0, or unified values with falsy primaries
-    if (derivedValue === "skip" || !isTruthy(derivedValue)) {
-      continue;
-    }
-
-    if (handleRuleResult(fieldKey, derivedValue, context, "section:exception_json"))
+    if (handleRuleResult(fieldKey, derivedValue, context, null, {}, sectionKey))
       return;
   }
 };

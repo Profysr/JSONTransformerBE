@@ -1,6 +1,6 @@
 import { applyTemplate } from "../../engineFunctions/TemplateEngine.js";
 
-export const buildReadCodeObj = (data, rules, context) => {
+export const buildReadCodeObj = (data, rules, context, sectionKey = "", fieldKey = "") => {
     const template = {
         child: { field: "child" },
         snomed_code: { field: "snomed_code" },
@@ -19,7 +19,7 @@ export const buildReadCodeObj = (data, rules, context) => {
         summary_until_duration: { field: "summary_until_duration" },
     };
 
-    const obj = applyTemplate(template, data, context);
+    const obj = applyTemplate(template, data, context, sectionKey, fieldKey);
 
     if (obj.promote_until_duration || obj.summary_until_duration) {
         obj.add_read_code_expiry = true;
@@ -28,7 +28,7 @@ export const buildReadCodeObj = (data, rules, context) => {
     return obj;
 };
 
-export const buildCreateProblemObj = (data, rules, context) => {
+export const buildCreateProblemObj = (data, rules, context, sectionKey = "", fieldKey = "") => {
     const template = {
         child: { field: "child" },
         comments: { field: "comments" },
@@ -46,5 +46,5 @@ export const buildCreateProblemObj = (data, rules, context) => {
         use_inactive: { field: "use_inactive" },
     };
 
-    return applyTemplate(template, data, context);
+    return applyTemplate(template, data, context, sectionKey, fieldKey);
 };

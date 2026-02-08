@@ -35,62 +35,9 @@ export const TransformFunctions = {
   },
 
   /**
-   * Maps boolean severity to Major/Minor
-   */
-  mapSeverity: (val) => {
-    if (typeof val === "string") {
-      const lower = val.toLowerCase().trim();
-      if (lower === "major") return "Major";
-      if (lower === "minor") return "Minor";
-    }
-    const isMajor = TransformFunctions.toBoolean(val);
-    return isMajor ? "Major" : "Minor";
-  },
-
-  /**
    * Trim whitespace
    */
   trim: (val) => {
     return typeof val === "string" ? val.trim() : val;
-  },
-
-  /**
-   * Internal helper to parse various date formats
-   */
-  _parseDate: (dateStr) => {
-    let date;
-    let format = "ISO";
-
-    if (dateStr.includes("-")) {
-      date = new Date(dateStr);
-      format = "ISO";
-    } else if (dateStr.includes("/")) {
-      const parts = dateStr.split("/");
-      if (parts.length === 3) {
-        date = new Date(parts[2], parts[1] - 1, parts[0]);
-        format = "UK";
-      } else {
-        date = new Date(dateStr);
-      }
-    } else {
-      date = new Date(dateStr);
-    }
-    return { date, format };
-  },
-
-  /**
-   * Internal helper to format dates back to string
-   */
-  _formatDate: (date, format) => {
-    if (isNaN(date.getTime())) return "";
-    const pad = (num) => String(num).padStart(2, "0");
-
-    if (format === "ISO") {
-      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-    } else if (format === "UK") {
-      return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
-    }
-
-    return date.toISOString().split("T")[0];
   },
 };

@@ -3,13 +3,15 @@ import { handleRuleResult, isKilled } from "../utils/transformationUtils.js";
 import { applyRule } from "./ApplyRule.js";
 
 // ==================
-// 1 Field Evaluation Logic
+// 1 Field Evaluation Logic - Evaluate field value only if canConditional is true
 // ==================
-/**
- * Evaluate field value only if canConditional is true
- */
+
 const createFieldEvaluator = (metaMap, inputData, context, sectionKey) => {
-  return (fieldKey, val, localRow = {}, logPrefix = null) => {
+  return (fieldKey, val, localRow = {}) => {
+    if (localRow[fieldKey] !== val) {
+      return localRow[fieldKey];
+    }
+
     const meta = metaMap.get(fieldKey) || {};
     if (meta.canConditional) {
       const result = applyRule(
@@ -18,15 +20,13 @@ const createFieldEvaluator = (metaMap, inputData, context, sectionKey) => {
         fieldKey,
         localRow,
         context,
-        logPrefix,
+        sectionKey
       );
 
-      const source = `table:${sectionKey}`;
       if (
-        handleRuleResult(fieldKey, result, context, source, localRow, {
+        handleRuleResult(fieldKey, result, context, localRow, {
           addToContext: false,
-          logPrefix,
-        })
+        }, sectionKey)
       ) {
         return result;
       }
@@ -73,22 +73,15 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         ? row[primaryKeyCol]
         : `Row ${index + 1}`;
 
-    const logPrefix = `[${sectionKey}][${rowId}]`;
-
     // a. Evaluate parentField logic
     if (parentFieldCol) {
       const shouldAddValue = evaluateField(
         parentFieldCol,
         row[parentFieldCol],
-        row,
-        logPrefix,
+        row
       );
 
       if (isKilled(shouldAddValue)) {
-        logger.warn(
-          "Aborted: Parent field triggered a termination (KILL).",
-          { sectionKey, functionName: "processTableRules", fieldKey: rowId }
-        );
         return { ...shouldAddValue, sectionKey, rowIdx: index };
       }
 
@@ -98,7 +91,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
         shouldAddValue == ""
       ) {
         logger.info(
-          `Skipped: Parent field '${parentFieldCol}' is not active.`,
+          `Skipping this code as parent field '${parentFieldCol}' -> ${row[parentFieldCol]}`,
           { sectionKey, functionName: "processTableRules", fieldKey: rowId }
         );
         if (onRowSkip) onRowSkip(row, inputData, { index });
@@ -113,7 +106,7 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
 
     for (const key of Object.keys(row)) {
       if (key === parentFieldCol || key === primaryKeyCol) continue;
-      const val = evaluateField(key, row[key], processedRow, logPrefix);
+      const val = evaluateField(key, row[key], processedRow);
 
       if (isKilled(val)) {
         rowKilled = true;
@@ -124,10 +117,6 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
     }
 
     if (rowKilled) {
-      logger.warn(
-        `Aborted: Field '${killResult.field}' triggered a termination (KILL).`,
-        { sectionKey, functionName: "processTableRules", fieldKey: rowId }
-      );
       return { ...killResult, sectionKey, rowIdx: index };
     }
 
@@ -146,6 +135,13 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
       index,
     });
 
+
+    logger.info(`Successfully processed row for ${rowId} and adding it to results`, {
+      sectionKey,
+      functionName: "processTableRules",
+      fieldKey: rowId,
+      row: processedRow,
+    });
 
     if (Array.isArray(outcome)) {
       results.push(...outcome);

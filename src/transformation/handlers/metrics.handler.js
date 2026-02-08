@@ -14,11 +14,12 @@ const splitBP = (
   row,
   rules,
   context,
-  logPrefix = null,
+  sectionKey = "",
 ) => {
+  const logMeta = { sectionKey, functionName: "splitBP", fieldKey: metricName };
   logger.info(
     "Splitting Blood Pressure into separate systolic and diastolic items.",
-    { sectionKey: "metrics_config_rules", functionName: "splitBP", fieldKey: metricName }
+    logMeta
   );
 
   const values = String(rawValue).split("/");
@@ -39,8 +40,8 @@ const splitBP = (
   };
 
   return [
-    createMetricObj(systolicContext, rules, context, logPrefix),
-    createMetricObj(diastolicContext, rules, context, logPrefix),
+    createMetricObj(systolicContext, rules, context, sectionKey, "bp_systolic"),
+    createMetricObj(diastolicContext, rules, context, sectionKey, "bp_diastolic"),
   ];
 };
 
@@ -48,7 +49,7 @@ const splitBP = (
 // 2- Build metric object with explicit field mapping
 // ==================
 
-const createMetricObj = (rowContext, rules, context, logPrefix = null) => {
+const createMetricObj = (rowContext, rules, context, sectionKey = "", fieldKey = "") => {
   const defaultTemplate = {
     metric_name: { field: "metricName" },
     value: {
@@ -70,7 +71,7 @@ const createMetricObj = (rowContext, rules, context, logPrefix = null) => {
     child: { field: "metric_codes" },
   };
 
-  const result = applyTemplate(defaultTemplate, rowContext, context, logPrefix);
+  const result = applyTemplate(defaultTemplate, rowContext, context, sectionKey, fieldKey);
   return result;
 };
 
@@ -110,12 +111,13 @@ const prepareMetricsRows = (metricsTableValue, inputMetrics) => {
 
 const executeMetricTransformation = (
   processedRow,
-  inputData,
   inputMetrics,
   context,
   rules,
+  sectionKey = "",
 ) => {
   const metricName = processedRow.metric;
+  const logMeta = { sectionKey, functionName: "executeMetricTransformation", fieldKey: metricName };
   if (!metricName) return null;
 
   // Find matching metric in input data (case-insensitive)
@@ -126,7 +128,7 @@ const executeMetricTransformation = (
   if (!metricKey) {
     logger.warn(
       "Metric not found in patient data. Skipping.",
-      { sectionKey: "metrics_config_rules", functionName: "executeMetricTransformation", fieldKey: metricName }
+      logMeta
     );
     return null;
   }
@@ -152,13 +154,16 @@ const executeMetricTransformation = (
       processedRow,
       rules,
       context,
+      sectionKey,
     );
   } else {
-    logger.info(`Metric evaluated with value: ${rawValue}`, { sectionKey: "metrics_config_rules", functionName: "executeMetricTransformation", fieldKey: metricName });
+    // logger.info(`Metric evaluated with value: ${rawValue}`, logMeta);
     return createMetricObj(
       rowContext,
       rules,
       context,
+      sectionKey,
+      metricName
     );
   }
 };
@@ -166,36 +171,37 @@ const executeMetricTransformation = (
 // ==================
 // 5 Main Handler
 // ==================
-export const processMetrics = (inputData, rules, context) => {
+export const processMetrics = (inputData, rules, context, sectionKey) => {
+  const logMeta = { sectionKey, functionName: "processMetrics" };
   const metricsTable = rules.metrics_list || {};
-  const inputMetrics = inputData.output?.metrics || inputData.metrics || {};
+  const inputMetrics = inputData.metrics || {};
 
   // 1. Pre-process rows
   metricsTable.value = prepareMetricsRows(metricsTable.value, inputMetrics);
 
   // 2. Process metrics_list table
   const results = processTableRules(inputData, metricsTable, {
-    sectionKey: "Metrics",
+    sectionKey,
     context,
-    onRowProcess: (processedRow, inputData) => {
+    onRowProcess: (processedRow) => {
       return executeMetricTransformation(
         processedRow,
-        inputData,
         inputMetrics,
         context,
         rules,
+        sectionKey,
       );
     },
   });
 
   if (results && results.isKilled) {
-    context.setKilled(results);
+    context.setKilled(results, sectionKey);
     return;
   }
 
-  context.addCandidate("metrics", results || [], "section:metrics");
+  context.addCandidate("metrics", results || [], sectionKey);
   logger.info(
     `Finished processing. Total metrics identified: ${results?.length || 0}`,
-    { sectionKey: "metrics_config_rules", functionName: "processMetrics" }
+    logMeta
   );
 };

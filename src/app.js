@@ -28,7 +28,7 @@ app.use(jsonParseErrorHandler);
 // 3 Logging & Routes
 // ==================
 app.use((req, res, next) => {
-  logger.info(`Incoming ${req.method} request to ${req.url}`, { sectionKey: "general", functionName: "requestLogger", path: req.url, method: req.method });
+  logger.info(`Incoming ${req.method} request to ${req.url}`, { path: req.url, method: req.method });
   next();
 });
 
@@ -68,7 +68,6 @@ const logCrash = (type, err) => {
     logger.error(`Process exiting due to ${type}!`, {
       error: err instanceof Error ? err.message : err,
       stack: err instanceof Error ? err.stack : undefined,
-      sectionKey: "general",
       functionName: "logCrash"
     });
   } catch (e) {

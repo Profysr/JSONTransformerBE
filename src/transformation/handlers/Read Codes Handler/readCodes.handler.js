@@ -12,7 +12,9 @@ import {
 import { classifyReadCodes } from "./classifiers.js";
 import { processProblemAttachments } from "./attachmentResolver.js";
 
-const sectionKey = "ReadCodes";
+// ==================
+// 0. Helpers
+// ==================
 
 const isFalse = (v) => v === false || v === "false";
 
@@ -25,6 +27,7 @@ const updateCodesMapFromSpecificCodes = (
   codesMap,
   pendingForcedMappings,
   context,
+  sectionKey = "",
 ) => {
   if (!specificCodesRules) return;
 
@@ -41,8 +44,7 @@ const updateCodesMapFromSpecificCodes = (
       });
 
       codeObj.add_code = true;
-      logger.info(`Processing row for child ${row.child}`, { ...row, sectionKey: "e2e_config_json", functionName: "updateCodesMapFromSpecificCodes", fieldKey: row.child });
-
+      
       if (
         row.forced_mappings &&
         row.forced_mappings !== row.child &&
@@ -66,10 +68,11 @@ const updateCodesMapFromSpecificCodes = (
 // ==================
 // 2. Main Handler
 // ==================
-export const processReadCodes = (inputData, rules, context) => {
+export const processReadCodes = (inputData, rules, context, sectionKey) => {
   const functionName = "processReadCodes";
-  logger.info("Starting analysis.", { sectionKey, functionName });
-  logger.info(`Input letter codes count: ${inputData.letter_codes_list?.length || 0}`, { sectionKey, functionName });
+  const logMeta = { sectionKey, functionName };
+
+  logger.info(`Input letter codes count: ${inputData.letter_codes_list?.length || 0}`, logMeta);
 
   const results = {
     readCodes: [],
@@ -82,7 +85,7 @@ export const processReadCodes = (inputData, rules, context) => {
   const codesMap = new Map();
   const useExisting =
     context.getCandidate("add_readcodes") ??
-    applyRule(inputData, rules.add_readcodes, "add_readcodes", {}, context);
+    applyRule(inputData, rules.add_readcodes, "add_readcodes", {}, context, sectionKey);
 
   if (!isFalse(useExisting)) {
     (inputData.letter_codes_list || []).forEach((c) => {
@@ -98,6 +101,7 @@ export const processReadCodes = (inputData, rules, context) => {
     codesMap,
     pendingForcedMappings,
     context,
+    sectionKey,
   );
 
   const lateralityMap = getLateralityMappings(rules);
@@ -110,12 +114,12 @@ export const processReadCodes = (inputData, rules, context) => {
   }
 
   if (pendingForcedMappings.length > 0) {
-    applyForcedMappings(codesMap, pendingForcedMappings);
+    applyForcedMappings(codesMap, pendingForcedMappings, sectionKey);
   }
 
   // 3. Classifying read codes
   const pendingProblemAttachments = [];
-  classifyReadCodes(codesMap, rules, results, pendingProblemAttachments, context);
+  classifyReadCodes(codesMap, rules, results, pendingProblemAttachments, context, sectionKey);
 
   // 4. Processing problem attachments
   const problemsCsv = inputData.problems_csv || [];
@@ -125,21 +129,22 @@ export const processReadCodes = (inputData, rules, context) => {
     problemsCsv,
     rules,
     context,
+    sectionKey,
   );
 
-  context.addCandidate("readCodes", results.readCodes, "section:readCodes");
-  context.addCandidate("createProblems", results.createProblems, "section:readCodes");
-  context.addCandidate("attachProblems", results.attachProblems, "section:readCodes");
+  context.addCandidate("readCodes", results.readCodes, sectionKey);
+  context.addCandidate("createProblems", results.createProblems, sectionKey);
+  context.addCandidate("attachProblems", results.attachProblems, sectionKey);
   context.addCandidate(
     "download_problems_csv",
     results.download_problems_csv,
-    "section:readCodes",
+    sectionKey
   );
 
   logger.info(
     `Done → ${results.readCodes.length} read codes, ` +
     `${results.createProblems.length} problems created, ` +
     `${results.attachProblems.length} attached.`,
-    { sectionKey, functionName }
+    logMeta
   );
 };

@@ -6,6 +6,7 @@ export const processProblemAttachments = (
     problemsCsv,
     rules,
     context,
+    sectionKey = "",
 ) => {
     // 1. If there are no pending problem attachments, return.
     if (pendingProblemAttachments.length === 0) return;
@@ -30,11 +31,11 @@ export const processProblemAttachments = (
 
             if (allowReadCodeSpecial) {
                 results.readCodes.push(
-                    buildReadCodeObj(codeData, rules, context),
+                    buildReadCodeObj(codeData, rules, context, sectionKey, childCode),
                 );
             } else if (allowProblemCreation) {
                 results.createProblems.push(
-                    buildCreateProblemObj(codeData, rules, context),
+                    buildCreateProblemObj(codeData, rules, context, sectionKey, childCode),
                 );
             }
         },

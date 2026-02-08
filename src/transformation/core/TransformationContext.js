@@ -23,53 +23,43 @@ export class TransformationContext {
   // ==================
   // 2 Candidate Management
   // ==================
-  /**
-   * Add a candidate value for a specific field.
-   */
-  addCandidate(key, value, source = "unknown") {
+  addCandidate(fieldKey, value, sectionKey = "") {
     if (this.killResult) return;
 
-    if (!this.candidates.has(key)) {
-      this.candidates.set(key, []);
+    if (!this.candidates.has(fieldKey)) {
+      this.candidates.set(fieldKey, []);
     }
 
     if (value && typeof value === "object" && value.isKilled) {
-      this.setKilled(value);
+      this.setKilled(value, sectionKey, fieldKey);
       return;
     }
 
-    const resolvedValue = resolveDeep(value, this.originalInput, {}, key, this);
+    const resolvedValue = resolveDeep(value, this.originalInput, {}, fieldKey, this, sectionKey);
 
-    this.candidates.get(key).push({
+    this.candidates.get(fieldKey).push({
       value: resolvedValue,
-      source,
+      sectionKey: sectionKey,
       timestamp: Date.now(),
     });
-
-    logger.info(
-      `Added candidate for '${key}': ${JSON.stringify(resolvedValue)} (Source: ${source})`,
-      { sectionKey: "general", functionName: "addCandidate", fieldKey: key }
-    );
   }
 
   // ==================
   // 3 State Inspection & Snapshot
   // ==================
-  /**
-   * Inspect all candidates currently stored.
-   */
+
   _viewCandidates(sortBySource = false) {
     const snapshot = {};
 
     for (const [key, candidates] of this.candidates.entries()) {
       let list = candidates.map((c) => ({
         value: c.value,
-        source: c.source,
+        sectionKey: c.sectionKey,
         timestamp: new Date(c.timestamp).toISOString(),
       }));
 
       if (sortBySource) {
-        list.sort((a, b) => a.source.localeCompare(b.source));
+        list.sort((a, b) => a.sectionKey.localeCompare(b.sectionKey));
       }
 
       snapshot[key] = list;
@@ -106,12 +96,13 @@ export class TransformationContext {
   /**
    * Set the global kill state.
    */
-  setKilled(result) {
+  setKilled(result, sectionKey = "", fieldKey = "") {
     if (!this.killResult) {
       this.killResult = result;
+      const logMeta = { sectionKey, functionName: "setKilled", fieldKey: fieldKey || result.field };
       logger.warn(
         `Transformation KILLED by ${result.field || "unknown"}.`,
-        { sectionKey: "general", functionName: "setKilled", fieldKey: result.field }
+        logMeta
       );
     }
   }

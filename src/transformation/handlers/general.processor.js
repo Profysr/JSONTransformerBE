@@ -5,7 +5,7 @@ import { handleRuleResult } from "../utils/transformationUtils.js";
 // ==================
 // 1 Main Handler
 // ==================
-export const processGeneralRules = (inputData, rules, context, sectionKey = "general") => {
+export const processGeneralRules = (inputData, rules, context, sectionKey = "") => {
   for (const [fieldKey, fieldValue] of Object.entries(rules)) {
     const derivedValue = applyRule(
       inputData,
@@ -13,9 +13,10 @@ export const processGeneralRules = (inputData, rules, context, sectionKey = "gen
       fieldKey,
       {},
       context,
+      sectionKey
     );
 
-    if (handleRuleResult(fieldKey, derivedValue, context, `section:${sectionKey}`))
+    if (handleRuleResult(fieldKey, derivedValue, context, null, {}, sectionKey))
       return;
   }
 };

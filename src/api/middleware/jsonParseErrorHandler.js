@@ -10,7 +10,6 @@ export const jsonParseErrorHandler = (err, req, res, next) => {
             path: req.path,
             method: req.method,
             error: err.message,
-            sectionKey: "general",
             functionName: "jsonParseErrorHandler"
         });
 

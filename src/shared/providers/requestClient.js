@@ -75,7 +75,6 @@ export const makeRequestWithRetry = async (
     result = await makeRequest(url, accessToken, method, payload);
 
     if (result.success) {
-      console.log(`${logPrefix}: Request successful on attempt ${attempt}`);
       success = true;
       break;
     }

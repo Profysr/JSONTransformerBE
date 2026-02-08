@@ -36,7 +36,7 @@ export const fetchConfigRules = async (inst_id, letter_type) => {
 
     logger.info(
       `Successfully retrieved configuration rules for '${inst_id}' [${letter_type}].`,
-      { sectionKey: "general", functionName: "fetchConfigRules" }
+      { functionName: "fetchConfigRules" }
     );
 
     /** Extracting data and passing it to next function to normalize */
@@ -45,7 +45,7 @@ export const fetchConfigRules = async (inst_id, letter_type) => {
 
     return configRules;
   } catch (error) {
-    logger.warn(`Failed to fetch config rules: ${error.message}`, { sectionKey: "general", functionName: "fetchConfigRules" });
+    logger.warn(`Failed to fetch config rules: ${error.message}`, { functionName: "fetchConfigRules" });
     return new ErrorHandler(
       500,
       `Failed to fetch config rules: ${error.message}`
@@ -85,7 +85,7 @@ const orchestrateTransformation = (inputData, configRules) => {
 const formatTransformationResponse = (res, output) => {
   /** if kill property found, then storing it with output */
   if (output && output.isKilled === true) {
-    logger.warn("Transformation terminated.", { output, sectionKey: "general", functionName: "formatTransformationResponse" });
+    logger.warn("Transformation terminated.", { output, functionName: "formatTransformationResponse" });
 
     return res.status(200).json({
       success: false,
@@ -123,27 +123,25 @@ export const processTransformation = catchAsyncHandler(
       inst_id,
       letter_type,
       nhsid: nhs_id,
-      letter_id,
-      sectionKey: "general",
-      functionName: "processTransformation"
+      letter_id
     });
 
     try {
       const validationError = validateTransformationInput(inputData);
       if (validationError) return next(validationError);
 
-      logger.info(`Fetching automation rules for institution '${inst_id}' and letter type '${letter_type}'...`, { sectionKey: "general", functionName: "processTransformation" });
+      logger.info(`Fetching automation rules for institution '${inst_id}' and letter type '${letter_type}'...`);
       const configRules = await fetchConfigRules(inst_id, letter_type);
 
       if (!configRules || Object.keys(configRules).length === 0) {
-        logger.error("No configuration rules found", { sectionKey: "general", functionName: "processTransformation" });
+        logger.error("No configuration rules found", { inst_id, letter_type });
         return next(new ErrorHandler(404, `No configuration rules found for inst_id: ${inst_id} and letter_type: ${letter_type}`));
       }
 
       const output = orchestrateTransformation(inputData, configRules);
 
       const duration = Date.now() - startTime;
-      logger.info(`Total transformation process completed in ${duration}ms.`, { sectionKey: "general", functionName: "processTransformation", duration });
+      logger.info(`Total transformation process completed in ${duration}ms.`);
 
       if (output instanceof ErrorHandler) {
         return next(output);
@@ -154,8 +152,6 @@ export const processTransformation = catchAsyncHandler(
       logger.error("Transformation Execution Error:", {
         error: error.message,
         stack: error.stack,
-        sectionKey: "general",
-        functionName: "processTransformation"
       });
       return next(
         new ErrorHandler(
@@ -217,8 +213,6 @@ export const processProblemResolution = catchAsyncHandler(
       nhsid: nhs_id,
       letter_id,
       hasCsv: !!(inputData.problems_csv && inputData.problems_csv.length),
-      sectionKey: "general",
-      functionName: "processProblemResolution"
     });
 
     try {
@@ -248,7 +242,7 @@ export const processProblemResolution = catchAsyncHandler(
         output,
       });
     } catch (error) {
-      logger.error("Problem Resolution Error:", { error: error.message, stack: error.stack, sectionKey: "general", functionName: "processProblemResolution" });
+      logger.error("Problem Resolution Error:", { error: error.message, stack: error.stack, functionName: "processProblemResolution", inst_id, letter_type });
       return next(new ErrorHandler(500, `Problem Resolution failed: ${error.message}`));
     }
   }

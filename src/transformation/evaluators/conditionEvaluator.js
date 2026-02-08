@@ -9,9 +9,9 @@ import { getValue, OPERATORS } from "../utils/operators.js";
 /**
  * Helper to resolve a value from multiple sources
  */
-const getActualValue = (path, inputData, localContext, context, isField, ruleKey = "") => {
+const getActualValue = (path, inputData, localContext, context, isField, fieldKey = "", sectionKey = "") => {
   // 1. Resolve variable or path
-  const resolved = resolveDeep(path, inputData, localContext, "", ruleKey, context);
+  const resolved = resolveDeep(path, inputData, localContext, fieldKey, context, sectionKey);
   if (resolved !== path) return resolved;
 
   // 2. Implicit path resolution
@@ -33,9 +33,10 @@ export const resolveValue = (
   path,
   inputData,
   localContext = {},
-  ruleKey = "",
+  fieldKey = "",
   isField = false,
   context = null,
+  sectionKey = ""
 ) => {
   if (typeof path !== "string") return path;
   return getActualValue(
@@ -44,7 +45,8 @@ export const resolveValue = (
     localContext,
     context,
     isField,
-    ruleKey,
+    fieldKey,
+    sectionKey
   );
 };
 
@@ -54,11 +56,12 @@ export const resolveValue = (
 export function evaluateCondition(
   inputData,
   condition,
-  ruleKey,
+  fieldKey,
   localContext = {},
   context = null,
-  // logPrefix = null,
+  sectionKey = ""
 ) {
+  const logMeta = { sectionKey, functionName: "evaluateCondition", fieldKey };
   try {
     const { field, operator, value } = condition;
     const caseSensitive =
@@ -68,23 +71,25 @@ export function evaluateCondition(
       field,
       inputData,
       localContext,
-      ruleKey,
+      fieldKey,
       true,
       context,
+      sectionKey
     );
     const inputVal = resolveValue(
       value,
       inputData,
       localContext,
-      ruleKey,
+      fieldKey,
       false,
       context,
+      sectionKey
     );
 
     if (fieldVal === undefined && !["is_null", "is_empty"].includes(operator)) {
       logger.warn(
-        `Property '${field}' was not found in either patient data or configuration row. Skipping configuration criteria.`,
-        { sectionKey: "general", functionName: "evaluateCondition", field, fieldKey: ruleKey }
+        `Property '${field}' was not found in either input data or local context. Skipping configuration criteria.`,
+        logMeta
       );
       return false;
     }
@@ -101,7 +106,7 @@ export function evaluateCondition(
     if (!isUnary && isEmpty(inputVal)) {
       logger.warn(
         `Missing comparison value for operator '${operator}'.`,
-        { sectionKey: "general", functionName: "evaluateCondition", operator, fieldKey: ruleKey }
+        logMeta
       );
       return false;
     }
@@ -112,13 +117,13 @@ export function evaluateCondition(
 
     logger.info(
       `Checking if '${field}' (${fieldVal}) ${operator} '${inputVal}' --> Result: ${result}`,
-      { sectionKey: "general", functionName: "evaluateCondition", field, fieldKey: ruleKey }
+      logMeta
     );
     return result;
   } catch (error) {
     logger.error(
       `Unexpected evaluation error: ${error.message}`,
-      { sectionKey: "general", functionName: "evaluateCondition", fieldKey: ruleKey, err: error }
+      { ...logMeta, err: error }
     );
     return new ErrorHandler(
       500,

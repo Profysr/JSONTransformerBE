@@ -13,13 +13,13 @@ export const evaluateRuleList = (
   fieldKey,
   localContext = {},
   context = null,
-  logPrefix = null,
+  sectionKey = "",
 ) => {
-  const prefix = logPrefix || `[${fieldKey}]`;
+  const logMeta = { sectionKey, functionName: "evaluateRuleList", fieldKey };
   if (!rules || !Array.isArray(rules) || rules.length === 0) {
     return new ErrorHandler(
       400,
-      `${prefix} Invalid or empty rules array in configuration.`,
+      "Invalid or empty rules array in configuration.", logMeta,
     );
   }
 
@@ -32,7 +32,7 @@ export const evaluateRuleList = (
           fieldKey,
           localContext,
           context,
-          logPrefix,
+          sectionKey,
         ),
       )
       : rules.every((rule) =>
@@ -42,7 +42,7 @@ export const evaluateRuleList = (
           fieldKey,
           localContext,
           context,
-          logPrefix,
+          sectionKey,
         ),
       );
 
@@ -55,19 +55,19 @@ export const evaluateRuleRecursive = (
   fieldKey,
   localContext = {},
   context = null,
-  logPrefix = null,
+  sectionKey = "",
 ) => {
-  const prefix = logPrefix || `[${fieldKey}]`;
+  const logMeta = { sectionKey, functionName: "evaluateRuleRecursive", fieldKey };
   if (rule.type === "group") {
     logger.info(
       `Checking a combined rule group (Logic: ${rule.logicType})`,
-      { sectionKey: "general", functionName: "evaluateRuleRecursive", fieldKey }
+      logMeta
     );
 
     if (!rule.rules || !Array.isArray(rule.rules)) {
       return new ErrorHandler(
         400,
-        `${prefix} Group rule missing 'rules' array in configuration.`,
+        "Group rule missing 'rules' array in configuration.", logMeta
       );
     }
 
@@ -78,7 +78,7 @@ export const evaluateRuleRecursive = (
       fieldKey,
       localContext,
       context,
-      logPrefix,
+      sectionKey,
     );
   }
 
@@ -88,7 +88,7 @@ export const evaluateRuleRecursive = (
     fieldKey,
     localContext,
     context,
-    logPrefix,
+    sectionKey
   );
   return result;
 };
@@ -96,11 +96,12 @@ export const evaluateRuleRecursive = (
 // ==================
 // 2 Outcome Processing
 // ==================
-const evaluateClauseOutcome = (outcome, fieldKey, index) => {
+const evaluateClauseOutcome = (outcome, fieldKey, index, sectionKey = "") => {
+  const logMeta = { sectionKey, functionName: "evaluateClauseOutcome", fieldKey };
   const isKilled = outcome.isKilled === true;
   logger.info(
-    `Rule criteria met in clause ${index + 1}. Terminal (KILL): ${isKilled}`,
-    { sectionKey: "general", functionName: "evaluateClauseOutcome", fieldKey }
+    `Rule criteria met in clause ${index + 1}. with (KILL) option: ${isKilled}.`,
+    logMeta
   );
 
   return {
@@ -120,20 +121,22 @@ export const evaluateCascadingAdvanced = (
   fieldKey,
   localContext = {},
   context = null,
-  logPrefix = null,
+  sectionKey = "",
 ) => {
-  const prefix = logPrefix || `[${fieldKey}]`;
+  const logMeta = { sectionKey, functionName: "evaluateCascadingAdvanced", fieldKey };
+
+  // iterating conditions and passing to functions for evaluations
   for (const [index, clause] of fieldValue.clauses.entries()) {
     if (!clause || typeof clause !== "object" || !Array.isArray(clause.rules)) {
       return new ErrorHandler(
         400,
-        `${prefix} Clause ${index + 1} is invalid or missing rules array.`,
+        `Clause ${index + 1} is invalid or missing rules array.`,
       );
     }
 
     logger.info(
       `Evaluating Clause ${index + 1} (Logic: ${clause.rootLogicType || "AND"})`,
-      { sectionKey: "general", functionName: "evaluateCascadingAdvanced", fieldKey }
+      logMeta
     );
 
     const result = evaluateRuleList(
@@ -143,7 +146,7 @@ export const evaluateCascadingAdvanced = (
       fieldKey,
       localContext,
       context,
-      logPrefix,
+      sectionKey,
     );
 
     if (result) {
@@ -151,9 +154,10 @@ export const evaluateCascadingAdvanced = (
         clause.outcome || {},
         fieldKey,
         index,
+        sectionKey
       );
     } else {
-      logger.info(`Condition not satisfied at Clause ${index + 1}`, { sectionKey: "general", functionName: "evaluateCascadingAdvanced", fieldKey });
+      logger.info(`Condition not satisfied at Clause ${index + 1}`, logMeta);
     }
   }
 
@@ -163,7 +167,7 @@ export const evaluateCascadingAdvanced = (
 
   logger.info(
     `No criteria met, using default value: ${elseValue}. Terminal (KILL): ${isKilled}`,
-    { sectionKey: "general", functionName: "evaluateCascadingAdvanced", fieldKey }
+    logMeta
   );
 
   return {

@@ -11,13 +11,12 @@ import { processReadCodes } from "../handlers/read codes handler/readCodes.handl
 // Transformation Engine
 // ==================
 export const transformationEngine = (inputData, configRules) => {
-  const startTime = Date.now();
-  const sectionKey = "general";
+
   const functionName = "transformationEngine";
 
   logger.info(
     `Starting transformation process. Identified ${Object.keys(configRules).length} configuration sections to process.`,
-    { sectionKey, functionName }
+    { functionName }
   );
 
   const context = new TransformationContext(inputData);
@@ -25,63 +24,53 @@ export const transformationEngine = (inputData, configRules) => {
   // ==================
   // Section Processing
   // ==================
-  for (const [sectionKeyEntry, sectionRules] of Object.entries(configRules)) {
+  for (const [sectionKey, sectionRules] of Object.entries(configRules)) {
     if (context.killResult) break;
-
-    const sectionType = sectionRules.sectionKey ?? sectionKeyEntry;
-    const currentSectionKey = sectionType; // Use the specific section type as the key
-
-    logger.info("Beginning evaluation...", { sectionKey: currentSectionKey, functionName });
 
     if (!sectionRules || typeof sectionRules !== "object") {
       throw new ErrorHandler(
         400,
         "Configuration is invalid or missing.",
-        { sectionKey: currentSectionKey, functionName }
+        { sectionKey, functionName }
       );
     }
 
-    const sectionStart = Date.now();
-
     try {
-      switch (sectionType) {
+      switch (sectionKey) {
         case "metrics_config_rules":
-          processMetrics(inputData, sectionRules, context);
+          processMetrics(inputData, sectionRules, context, sectionKey);
           break;
         case "e2e_config_json":
-          processReadCodes(inputData, sectionRules, context);
+          processReadCodes(inputData, sectionRules, context, sectionKey);
           break;
         case "exception_json":
-          processExceptionRules(inputData, sectionRules, context);
+          processExceptionRules(inputData, sectionRules, context, sectionKey);
           break;
         default:
-          if (sectionKeys.includes(sectionType)) {
-            processGeneralRules(inputData, sectionRules, context, sectionType);
+          if (sectionKeys.includes(sectionKey)) {
+            processGeneralRules(inputData, sectionRules, context, sectionKey);
           } else {
             logger.warn(
               "Unknown section type/key. Skipping to prevent data leakage.",
-              { sectionKey: currentSectionKey, functionName }
+              { sectionKey, functionName }
             );
             throw new ErrorHandler(
               400,
               "Invalid Configuration. Section is not recognized.",
-              { sectionKey: currentSectionKey, functionName }
+              { sectionKey, functionName }
             );
           }
       }
     } catch (err) {
       logger.error(
         `Failed with error: ${err.message}`,
-        { sectionKey: currentSectionKey, functionName, err }
+        { sectionKey, functionName, err }
       );
       throw err;
     }
 
-    const sectionDuration = Date.now() - sectionStart;
-    logger.info(`Completed in ${sectionDuration}ms.`, { sectionKey: currentSectionKey, functionName });
-
     if (context.killResult) {
-      logger.warn("Transformation aborted by kill signal.", { sectionKey: currentSectionKey, functionName });
+      logger.warn("Transformation aborted by kill signal.", { sectionKey, functionName });
       break;
     }
   }
@@ -89,15 +78,8 @@ export const transformationEngine = (inputData, configRules) => {
   // ==================
   // Final Output Resolution
   // ==================
-  const finalOutput = context.getFinalOutput();
   const candidates = context._viewCandidates?.(true) ?? [];
-  const totalDuration = Date.now() - startTime;
+  logger.debug("Candidates:", { candidates });
 
-  logger.info(
-    `Transformation lifecycle finished successfully in ${totalDuration}ms.`,
-    { sectionKey, functionName }
-  );
-  logger.debug("Candidates:", { candidates, sectionKey, functionName });
-
-  return finalOutput;
+  return context.getFinalOutput();
 };

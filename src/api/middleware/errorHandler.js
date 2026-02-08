@@ -25,10 +25,10 @@ export const errorMiddleware = (err, req, res) => {
     // Null pointer exceptions and reference errors
     statusCode = 500;
     message = "An internal error occurred while processing your request.";
-    logger.error("Type/Reference Error:", { error: err.message, stack: err.stack, sectionKey: "general", functionName: "errorMiddleware" });
+    logger.error("Type/Reference Error:", { error: err.message, stack: err.stack, functionName: "errorMiddleware" });
   } else if (!(err instanceof ErrorHandler)) {
     // Convert unknown errors to ErrorHandler
-    logger.error("Unhandled Error:", { error: err.message, stack: err.stack, sectionKey: "general", functionName: "errorMiddleware" });
+    logger.error("Unhandled Error:", { error: err.message, stack: err.stack, functionName: "errorMiddleware" });
   }
 
   // Log the error before sending response
@@ -36,7 +36,7 @@ export const errorMiddleware = (err, req, res) => {
     path: req.path,
     method: req.method,
     statusCode,
-    sectionKey: "general",
+  
     functionName: "errorMiddleware"
   });
 

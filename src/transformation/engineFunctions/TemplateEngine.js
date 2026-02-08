@@ -14,13 +14,14 @@ const evaluateTemplateCondition = (
   rowData,
   ruleKey = "Global",
   context = null,
-  logPrefix = null,
+  sectionKey = "",
+  fieldKey = "",
 ) => {
   if (!condition) return true;
 
   if (Array.isArray(condition)) {
     return condition.every((c) =>
-      evaluateTemplateCondition(c, rowData, ruleKey, context),
+      evaluateTemplateCondition(c, rowData, ruleKey, context, sectionKey, fieldKey),
     );
   }
 
@@ -37,7 +38,7 @@ const evaluateTemplateCondition = (
     } catch (error) {
       logger.warn(
         `Logic internal evaluation error: "${condition}". Details: ${error.message}`,
-        { sectionKey: "general", functionName: "evaluateTemplateCondition", condition, fieldKey: ruleKey }
+        { sectionKey, functionName: "evaluateTemplateCondition", condition, fieldKey: fieldKey || ruleKey }
       );
       return false;
     }
@@ -50,10 +51,10 @@ const evaluateTemplateCondition = (
       const list = rules || [];
       return logic === "OR"
         ? list.some((r) =>
-          evaluateTemplateCondition(r, rowData, ruleKey, context, logPrefix),
+          evaluateTemplateCondition(r, rowData, ruleKey, context, sectionKey, fieldKey),
         )
         : list.every((r) =>
-          evaluateTemplateCondition(r, rowData, ruleKey, context, logPrefix),
+          evaluateTemplateCondition(r, rowData, ruleKey, context, sectionKey, fieldKey),
         );
     }
 
@@ -64,7 +65,8 @@ const evaluateTemplateCondition = (
         ruleKey,
         rowData,
         context,
-        logPrefix,
+        sectionKey,
+        fieldKey || ruleKey
       );
     }
   }
@@ -76,7 +78,7 @@ const evaluateTemplateCondition = (
 // 2 Transformation Application
 // ==================
 
-const applyTransforms = (value, transforms, context) => {
+const applyTransforms = (value, transforms, context, sectionKey = "", fieldKey = "") => {
   if (!transforms) return value;
 
   const transformList = Array.isArray(transforms) ? transforms : [transforms];
@@ -90,7 +92,7 @@ const applyTransforms = (value, transforms, context) => {
       if (fn) {
         result = fn(result, context);
       } else {
-        logger.warn(`Transform '${t}' not found.`, { sectionKey: "general", functionName: "applyTransforms", transform: t });
+        logger.warn(`Transform '${t}' not found.`, { sectionKey, functionName: "applyTransforms", transform: t, fieldKey });
       }
     }
   }
@@ -108,7 +110,8 @@ export const applyTemplate = (
   template,
   rowData,
   context = null,
-  logPrefix = null,
+  sectionKey = "",
+  fieldKey = "",
 ) => {
   // 3.1 Validate Input
   if (!template || typeof template !== "object") {
@@ -122,6 +125,12 @@ export const applyTemplate = (
 
   // 3.2 Process Template Keys
   for (const [key, config] of Object.entries(template)) {
+    // Optimization: Skip if source field is already 'skip'
+    if (config?.field && rowData[config.field] === "skip") {
+      result[key] = "skip";
+      continue;
+    }
+
     // 3.3 Evaluate Key Conditions
     if (typeof config === "object" && config !== null && config.condition) {
       const isConditionMet = evaluateTemplateCondition(
@@ -129,7 +138,8 @@ export const applyTemplate = (
         rowData,
         key,
         context,
-        logPrefix,
+        sectionKey,
+        fieldKey || key,
       );
       if (!isConditionMet) {
         result[key] = null;
@@ -145,13 +155,13 @@ export const applyTemplate = (
         value = rowData[config.field];
 
         if (config.transform) {
-          value = applyTransforms(value, config.transform, rowData);
+          value = applyTransforms(value, config.transform, rowData, sectionKey, fieldKey || key);
         }
       } else if (config.value !== undefined) {
         value = config.value;
       } else if (!config.condition || Object.keys(config).length > 1) {
         if (!config.field && config.value === undefined) {
-          value = applyTemplate(config, rowData, context, logPrefix);
+          value = applyTemplate(config, rowData, context, sectionKey, fieldKey || key);
         }
       }
     } else {

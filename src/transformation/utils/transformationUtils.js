@@ -58,8 +58,7 @@ export const isKilled = (value) => {
 // 3 Unified Value Processing
 // ==================
 
-export const processUnifiedValue = (fieldKey, unifiedObj, context, source, localTarget = null, options = {}) => {
-    // const { addToContext = true, logPrefix = null } = options;
+export const processUnifiedValue = (fieldKey, unifiedObj, context, localTarget = null, options = {}, sectionKey = "") => {
     const { addToContext = true } = options;
     const { primaryValue, ...dependents } = unifiedObj;
 
@@ -74,7 +73,7 @@ export const processUnifiedValue = (fieldKey, unifiedObj, context, source, local
             contextObj = { primaryValue, ...skippedDependents };
         }
 
-        context.addCandidate(fieldKey, contextObj, source);
+        context.addCandidate(fieldKey, contextObj, sectionKey);
     }
 
     if (localTarget) {
@@ -89,12 +88,12 @@ export const processUnifiedValue = (fieldKey, unifiedObj, context, source, local
 
         if (localTarget) {
             if (isWinnerTruthy) {
-                finalDepValue = resolveDeep(depValue, context?.originalInput || {}, localTarget, depKey, context);
+                finalDepValue = resolveDeep(depValue, context?.originalInput || {}, localTarget, depKey, context, sectionKey, depKey);
             }
             localTarget[depKey] = finalDepValue;
             logger.info(
                 `Mapped related field: ${depKey} = ${JSON.stringify(finalDepValue)}`,
-                { sectionKey: "general", functionName: "processUnifiedValue", fieldKey }
+                { sectionKey, functionName: "processUnifiedValue", fieldKey }
             );
         }
     }
@@ -104,8 +103,8 @@ export const processUnifiedValue = (fieldKey, unifiedObj, context, source, local
 // 4 Rule Result Orchestration
 // ==================
 
-export const handleRuleResult = (fieldKey, result, context, source, localTarget = null, options = {}) => {
-    const { addToContext = true, logPrefix = null } = options;
+export const handleRuleResult = (fieldKey, result, context, localTarget = null, options = {}, sectionKey = "") => {
+    const { addToContext = true } = options;
 
     // 1. Check Kill Signal
     if (isKilled(result)) {
@@ -114,14 +113,14 @@ export const handleRuleResult = (fieldKey, result, context, source, localTarget 
                 ...result,
                 isKilled: true,
                 field: fieldKey,
-            });
+            }, sectionKey, fieldKey);
         }
         return true;
     }
 
     // 2. Simple Values
     if (result === null || typeof result !== "object") {
-        if (addToContext && context) context.addCandidate(fieldKey, result, source);
+        if (addToContext && context) context.addCandidate(fieldKey, result, sectionKey);
         if (localTarget) localTarget[fieldKey] = result;
         return false;
     }
@@ -135,9 +134,9 @@ export const handleRuleResult = (fieldKey, result, context, source, localTarget 
     if (result.matrixAssignments && typeof result.matrixAssignments === "object") {
         for (const [k, v] of Object.entries(result.matrixAssignments)) {
             if (isUnifiedValue(v)) {
-                processUnifiedValue(k, v, context, `matrix:${fieldKey}`, localTarget, { addToContext: true, logPrefix });
+                processUnifiedValue(k, v, context, localTarget, { addToContext: true }, sectionKey);
             } else {
-                if (context) context.addCandidate(k, v, `matrix:${fieldKey}`);
+                if (context) context.addCandidate(k, v, sectionKey);
                 if (localTarget) localTarget[k] = v;
             }
         }
@@ -147,9 +146,9 @@ export const handleRuleResult = (fieldKey, result, context, source, localTarget 
     const finalValue = result.hasOwnProperty("value") ? result.value : result;
 
     if (isUnifiedValue(finalValue)) {
-        processUnifiedValue(fieldKey, finalValue, context, source, localTarget, { addToContext, logPrefix });
+        processUnifiedValue(fieldKey, finalValue, context, localTarget, { addToContext }, sectionKey);
     } else {
-        if (addToContext && context) context.addCandidate(fieldKey, finalValue, source);
+        if (addToContext && context) context.addCandidate(fieldKey, finalValue, sectionKey);
         if (localTarget) localTarget[fieldKey] = finalValue;
     }
 

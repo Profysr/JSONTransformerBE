@@ -19,8 +19,9 @@ export const applyRule = (
   fieldKey,
   localContext = {},
   context = null,
-  logPrefix = null,
+  sectionKey = "",
 ) => {
+  const logMeta = { sectionKey, functionName: "applyRule", fieldKey: fieldKey || "unknown" };
 
   // 1. Check for Advanced Logic
   if (isAdvancedLogic(fieldValue)) {
@@ -30,14 +31,10 @@ export const applyRule = (
       fieldKey,
       localContext,
       context,
-      logPrefix,
+      sectionKey
     );
 
     if (result.isKilled) {
-      logger.warn(
-        `Rule triggered a termination (KILL). Resulting value: ${result.value}`,
-        { sectionKey: "general", functionName: "applyRule", fieldKey }
-      );
       return result;
     }
     return result;
@@ -51,6 +48,7 @@ export const applyRule = (
       localContext,
       fieldKey,
       context,
+      sectionKey
     );
   }
 
@@ -61,7 +59,7 @@ export const applyRule = (
   ) {
     logger.info(
       `Overriding existing value "${inputData[fieldKey]}" with preferred static value: "${fieldValue}"`,
-      { sectionKey: "general", functionName: "applyRule", fieldKey }
+      logMeta
     );
   }
 
