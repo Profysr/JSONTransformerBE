@@ -28,7 +28,7 @@ const updateCodesMapFromSpecificCodes = (
   codesMap,
   pendingForcedMappings,
   context,
-  sectionKey = "",
+  // sectionKey = "",
 ) => {
   if (!specificCodesRules) return;
 
@@ -94,8 +94,6 @@ export const processReadCodes = (inputData, rules, context, sectionKey) => {
   const functionName = "processReadCodes";
   const logMeta = { sectionKey, functionName };
 
-  logger.info(`Input letter codes count: ${inputData.letter_codes_list?.length || 0}`, logMeta);
-
   // Initialize Features
   const features = getFeatures(inputData, rules, context, sectionKey);
   logger.info(`Features enabled: ${JSON.stringify(features)}`, logMeta);
@@ -120,7 +118,7 @@ export const processReadCodes = (inputData, rules, context, sectionKey) => {
     context.addCandidate("download_problems_csv", results.download_problems_csv, sectionKey);
 
     logger.info(
-      `Received ${results.pendingCodes.length} pending codes and processed them → ${results.readCodes.length} read codes, ` +
+      `Received ${inputData.pendingCodes?.length || 0} pending codes and processed them → ${results.readCodes.length} read codes, ` +
       `${results.createProblems.length} problems created, ` +
       `${results.attachProblems.length} attached`,
       logMeta
@@ -129,6 +127,7 @@ export const processReadCodes = (inputData, rules, context, sectionKey) => {
   }
 
   // 1. Setting incoming codes
+  logger.info(`Input letter codes count: ${inputData.letter_codes_list?.length || 0}`, logMeta);
   const codesMap = new Map();
   const useExisting =
     context.getCandidate("add_readcodes") ??

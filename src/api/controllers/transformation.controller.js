@@ -171,12 +171,14 @@ export const findExistingProblems = catchAsyncHandler(
     const letter_id = inputData?.letter_id;
     const letter_type = inputData?.letter_type;
 
-    logger.info("Received Problem Resolution request:", {
-      inst_id,
-      letter_type,
-      letter_id,
-      hasCsv: !!(inputData.problems_csv && inputData.problems_csv.length),
-    });
+    // logger.info("Received Problem Resolution request:", {
+    //   inst_id,
+    //   letter_type,
+    //   letter_id,
+    //   hasCsv: !!(inputData.problems_csv && inputData.problems_csv.length),
+    // });
+
+    // console.log("Request Received: ", inputData);
 
     // Signal optimized path for handlers
     inputData.is_pending_resolution = true;
