@@ -1,5 +1,6 @@
 import logger from "../../../shared/logger.js";
 import { buildReadCodeObj, buildCreateProblemObj } from "./codeTemplates.js";
+import { preprocessProblemsCsv } from "./preprocessProblems.js";
 
 // ============================
 // 1. Find Code without laterality in Existings
@@ -138,7 +139,10 @@ export const processProblemAttachments = (
 
     if (pendingProblemAttachments.length === 0) return;
 
-    if (!problemsCsv || problemsCsv.length === 0) {
+    /**
+     * If csv is present, but there's no problem in it. This likely means user has removed all problems from csv after first request. In this case, we should not attempt to match any codes and directly move them to pending resolution again, instead of creating/attaching problems based on stale csv data. This is a critical fix to prevent incorrect problem attachments or creations based on outdated csv inputs.
+     */
+    if (!problemsCsv) {
         results.download_problems_csv = true;
 
         // Capture full context for optimized second request
@@ -153,12 +157,15 @@ export const processProblemAttachments = (
         return;
     }
 
+    // Preprocess the CSV data to add computed fields
+    const preprocessedCsv = preprocessProblemsCsv(problemsCsv, rules);
+
     pendingProblemAttachments.forEach(
         ({ childCode, codeData, allowProblemCreation, allowReadCodeSpecial }) => {
             const rowLogMeta = { ...logMeta, fieldKey: childCode };
 
-            // Initial filter by code
-            const potentialMatches = problemsCsv.filter(
+            // Initial filter by code using the preprocessed data
+            const potentialMatches = preprocessedCsv.filter(
                 (p) => p.code === childCode || p.readCode === childCode || p.child === childCode,
             );
 

@@ -9,7 +9,6 @@ import { transformationEngine } from "../../transformation/core/transformationEn
 import { TransformationContext } from "../../transformation/core/TransformationContext.js";
 import { processReadCodes } from "../../transformation/handlers/ReadCodesHandler/readCodes.handler.js";
 
-
 // ==================
 // 1 Config Rule Fetching
 // ==================
@@ -77,7 +76,7 @@ const validateTransformationInput = (inputData) => {
 // 3 Response Formatting
 // ==================
 
-const formatTransformationResponse = (res, output) => {
+const formatTransformationResponse = (res, output, meta) => {
   /** if kill property found, then storing it with output */
   if (output && output.isKilled === true) {
     logger.warn("Transformation terminated.", { output, functionName: "formatTransformationResponse" });
@@ -86,6 +85,7 @@ const formatTransformationResponse = (res, output) => {
       success: false,
       message: `Transformation terminated by rule applied to ${output.field} for value ${output.value}. The resulting value is retained.`,
       isKilled: true,
+      ...meta,
       output,
     });
   }
@@ -94,6 +94,7 @@ const formatTransformationResponse = (res, output) => {
     success: true,
     message: "Data successfully transformed according to client-specific rules.",
     isKilled: false,
+    ...meta,
     output,
   });
 };
@@ -114,11 +115,9 @@ export const processTransformation = catchAsyncHandler(
     const BASE_URL = CONFIG.shary.apiUrl;
     const apiEndpoint = `${BASE_URL}/automation_config/transformation_logs/${inst_id.toLowerCase().trim()}`;
 
+    let meta = { inst_id, letter_type, nhs_id, letter_id };
     logger.info("Incoming transformation request received.", {
-      inst_id,
-      letter_type,
-      nhsid: nhs_id,
-      letter_id
+      ...meta
     });
 
     try {
@@ -142,11 +141,12 @@ export const processTransformation = catchAsyncHandler(
         return next(output);
       }
 
-      return formatTransformationResponse(res, output);
+      return formatTransformationResponse(res, output, meta);
     } catch (error) {
       logger.error("Transformation Execution Error:", {
         error: error.message,
         stack: error.stack,
+        ...meta
       });
       return next(
         new ErrorHandler(
@@ -168,17 +168,13 @@ export const findExistingProblems = catchAsyncHandler(
     const { inst_id } = req.params;
     const inputData = req.body || {};
 
-    const letter_id = inputData?.letter_id;
     const letter_type = inputData?.letter_type;
 
-    // logger.info("Received Problem Resolution request:", {
-    //   inst_id,
-    //   letter_type,
-    //   letter_id,
-    //   hasCsv: !!(inputData.problems_csv && inputData.problems_csv.length),
-    // });
-
-    // console.log("Request Received: ", inputData);
+    logger.info("Received Problem Resolution request:", {
+      inst_id,
+      letter_type,
+      hasCsv: !!(inputData.problems_csv && inputData.problems_csv.length),
+    });
 
     // Signal optimized path for handlers
     inputData.is_pending_resolution = true;
