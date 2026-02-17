@@ -143,7 +143,7 @@ export class TransformationContext {
       return this.killResult;
     }
 
-    const output = {};
+    const output = { ...this.originalInput };
     // Looking for the first truthy winner value and passing it to output
     for (const [key, candidates] of this.candidates.entries()) {
       const winner = this._pickWinner(candidates);
