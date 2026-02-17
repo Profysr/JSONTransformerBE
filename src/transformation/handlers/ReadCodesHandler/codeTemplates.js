@@ -22,7 +22,7 @@ export const buildReadCodeObj = (data, rules, context, sectionKey = "", fieldKey
 
     const obj = applyTemplate(template, data, context, sectionKey, fieldKey);
 
-    if (obj.promote_problem || obj.put_summary) {
+    if ((obj.promote_problem && obj.promote_problem != "skip") || (obj.put_summary && obj.put_summary != "skip")) {
       obj.special_treatment = true;
     }
 

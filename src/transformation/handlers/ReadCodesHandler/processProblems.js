@@ -139,21 +139,32 @@ export const processProblemAttachments = (
 
     if (pendingProblemAttachments.length === 0) return;
 
+    // Log the received problemsCsv for debugging
+    logger.info("problemsCsv received", { ...logMeta, problemsCsv });
+
+    // Type guard: if problemsCsv is a single object and not an array, convert it to an array
+    if (problemsCsv && !Array.isArray(problemsCsv) && typeof problemsCsv === "object") {
+        problemsCsv = [problemsCsv];
+    }
+
     /**
      * If csv is present, but there's no problem in it. This likely means user has removed all problems from csv after first request. In this case, we should not attempt to match any codes and directly move them to pending resolution again, instead of creating/attaching problems based on stale csv data. This is a critical fix to prevent incorrect problem attachments or creations based on outdated csv inputs.
      */
-    if (!problemsCsv) {
+    if (!problemsCsv || problemsCsv.length === 0) {
         results.download_problems_csv = true;
 
         // Capture full context for optimized second request
-        results.pendingCodes = pendingProblemAttachments.map(p => ({
+        results.pendingCodes = pendingProblemAttachments.map((p) => ({
             childCode: p.childCode,
             codeData: p.codeData,
             allowProblemCreation: p.allowProblemCreation,
-            allowReadCodeSpecial: p.allowReadCodeSpecial
+            allowReadCodeSpecial: p.allowReadCodeSpecial,
         }));
 
-        logger.info(`Problem CSV missing. ${results.pendingCodes.length} codes added to pendingCodes.`, logMeta);
+        logger.info(
+            `Problem CSV missing. ${results.pendingCodes.length} codes added to pendingCodes.`,
+            logMeta,
+        );
         return;
     }
 
