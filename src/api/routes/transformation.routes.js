@@ -5,7 +5,7 @@ import path from "path";
 import catchAsyncHandler from "../middleware/catchAsyncHandler.js";
 import { ErrorHandler } from "../middleware/errorHandler.js";
 import { deriveJSONRules } from "../../transformation/engineFunctions/rulesDeriver.js";
-
+import { validateRequiredKeys } from "../middleware/validateRequiredKeys.js";
 
 const router = Router();
 
@@ -17,10 +17,16 @@ router.get("/", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
-router.post("/transform/:inst_id", processTransformation);
-router.post("/transform/find-problems/:inst_id", findExistingProblems);
-
+router.post(
+  "/transform/:inst_id",
+  validateRequiredKeys(["nhs_id", "letter_id", "letter_type"]),
+  processTransformation
+);
+router.post(
+  "/transform/find-problems/:inst_id",
+  validateRequiredKeys(["letter_type"]),
+  findExistingProblems
+);
 
 /** Created it for testing purpose */
 router.get(

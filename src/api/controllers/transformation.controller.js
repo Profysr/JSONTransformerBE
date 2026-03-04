@@ -167,7 +167,21 @@ export const findExistingProblems = catchAsyncHandler(
   async (req, res, next) => {
     const { inst_id } = req.params;
     const inputData = req.body || {};
-
+  // Validate problems_csv type (must be object or array, not string/null/number)
+  if (
+    inputData.problems_csv !== undefined &&
+    (
+      typeof inputData.problems_csv !== "object" ||
+      inputData.problems_csv === null
+    )
+  ) {
+    return next(
+      new ErrorHandler(
+        400,
+        "Invalid data type: 'problems_csv' must be an object or an array."
+      )
+    );
+  }
     const letter_type = inputData?.letter_type;
 
     logger.info("Received Problem Resolution request:", {
