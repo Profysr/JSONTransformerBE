@@ -130,14 +130,11 @@ export const processProblemAttachments = (
     sectionKey = "",
     features = {},
 ) => {
-    // results.readCodes = results.readCodes || [];
-    // results.createProblems = results.createProblems || [];
-    // results.attachProblems = results.attachProblems || [];
-    // results.pendingCodes = results.pendingCodes || [];
-
+    logger.info("FULL CONTEXT OBJECT RECEIVED", {
+            context,
+            contextKeys: Object.keys(context || {})
+        });
     const logMeta = { sectionKey, functionName: "processProblemAttachments" };
-
-    if (pendingProblemAttachments.length === 0) return;
 
     // Log the received problemsCsv for debugging
     logger.info("problemsCsv received", { ...logMeta, problemsCsv });
@@ -148,29 +145,90 @@ export const processProblemAttachments = (
     }
 
     /**
-     * If csv is present, but there's no problem in it. This likely means user has removed all problems from csv after first request. In this case, we should not attempt to match any codes and directly move them to pending resolution again, instead of creating/attaching problems based on stale csv data. This is a critical fix to prevent incorrect problem attachments or creations based on outdated csv inputs.
+     * If csv is present, but there's no problem in it. 
+     * This likely means user has removed all problems from csv after first request. 
+     * In this case, we should not attempt to match any codes and directly move them to pending resolution again,
+     * instead of creating/attaching problems based on stale csv data.
+     * This is a critical fix to prevent incorrect problem attachments or creations based on outdated csv inputs.
      */
+    const needsCsv =
+    pendingProblemAttachments.length > 0 ||
+    features.link_diabetic_problem === true;
+
     if (!problemsCsv || problemsCsv.length === 0) {
-        results.download_problems_csv = true;
+        if (needsCsv) {
+            results.download_problems_csv = true;
 
-        // Capture full context for optimized second request
-        results.pendingCodes = pendingProblemAttachments.map((p) => ({
-            childCode: p.childCode,
-            codeData: p.codeData,
-            allowProblemCreation: p.allowProblemCreation,
-            allowReadCodeSpecial: p.allowReadCodeSpecial,
-        }));
+            results.pendingCodes = pendingProblemAttachments.map((p) => ({
+                childCode: p.childCode,
+                codeData: p.codeData,
+                allowProblemCreation: p.allowProblemCreation,
+                allowReadCodeSpecial: p.allowReadCodeSpecial,
+            }));
 
-        logger.info(
-            `Problem CSV missing. ${results.pendingCodes.length} codes added to pendingCodes.`,
-            logMeta,
-        );
-        return;
+            logger.info(
+                `Problem CSV missing. Requesting CSV for ${needsCsv ? "matching flow" : "unknown"}.`,
+                logMeta
+            );
+
+            return;
+        }
     }
 
     // Preprocess the CSV data to add computed fields
     const preprocessedCsv = preprocessProblemsCsv(problemsCsv, rules);
+logger.info("=== CONTEXT DEBUG START ===", {
+    fullContext: context,
+    hasContext: !!context,
+    letterTypeRaw: context?.letter_type,
+    letterTypeType: typeof context?.letter_type,
+    letterTypeTrimmed: context?.letter_type?.trim?.(),
+    letterTypeNormalized: context?.letter_type?.trim?.().toLowerCase?.(),
+    featureFlagRaw: features?.link_diabetic_problem,
+    featureFlagType: typeof features?.link_diabetic_problem,
+});
+    // ============================
+    // Special Feature: Link Diabetic Problems
+    // ============================
+    if (
+        features.link_diabetic_problem === true &&
+        (context?.letter_type || "").toLowerCase() === "retinal screening"
+    ) {
+        logger.info("Letter type in context:", context?.letter_type);
 
+        logger.info("Diabetic block check:", {
+        linkFlag: features.link_diabetic_problem,
+        letterType: context?.letter_type
+        });
+        const logMetaSpecial = { ...logMeta, specialFeature: "LinkDiabeticProblems" };
+
+        const diabeticPriorityCodes = ["X40J5", "X40J4", "C10.."];
+
+        for (const code of diabeticPriorityCodes) {
+            const match = preprocessedCsv.find(
+                (p) =>
+                    p.child === code
+            );
+
+            if (match) {
+                logger.info(
+                    `Diabetic match found for ${code} at row ${match.rowIdx}`,
+                    logMetaSpecial
+                );
+
+                results.attachProblems.push(match.rowIdx);
+                return; // STOP everything
+            }
+        }
+
+        logger.info(
+            "No diabetic problems found in CSV. Skipping creation and attachment.",
+            logMetaSpecial
+        );
+    }
+
+    //we make above thing as a function,  
+    //this is for problem checking ,  we have to let it run this as well after checking diabetic codes
     pendingProblemAttachments.forEach(
         ({ childCode, codeData, allowProblemCreation, allowReadCodeSpecial }) => {
             const rowLogMeta = { ...logMeta, fieldKey: childCode };

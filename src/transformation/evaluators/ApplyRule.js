@@ -10,8 +10,8 @@ import { evaluateCascadingAdvanced } from "./EvaluateRule.js";
 /**
  * Orchestrates the application of rules based on type:
  * 1. Advanced Logic (Conditional)
- * 2. Variable Resolution
- * 3. Static Mapping
+ * 2. Variable Resolution (data of input sent from kynoby tool)
+ * 3. Static Mapping (hard coded words , like "a&e")
  */
 export const applyRule = (
   inputData,

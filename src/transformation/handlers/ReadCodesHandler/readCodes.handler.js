@@ -71,11 +71,11 @@ const updateCodesMapFromSpecificCodes = (
 const handlePendingCodes = (inputData, rules, context, sectionKey, results) => {
   const logMeta = { sectionKey, functionName: "handlePendingCodes" };
   const pendingCodes = inputData.pendingCodes || [];
+  const problemsCsv = inputData.problems_csv || [];
 
   logger.info(`Optimized path: Processing ${pendingCodes.length} pending codes.`, logMeta);
 
   // Directly pass to attachments (bypass classification)
-  const problemsCsv = inputData.problems_csv || [];
   processProblemAttachments(
     results,
     pendingCodes, // Here pendingCodes acts as pendingProblemAttachments

@@ -17,5 +17,15 @@ export const getFeatures = (inputData, rules, context, sectionKey) => {
         use_inactive: getFeature("use_inactive", true),
         search_codes_in_problems: getFeature("search_codes_in_problems", false),
         override_bilateral: getFeature("override_bilateral", false),
+        link_diabetic_problem: getFeature("link_diabetic_problem", false),
     };
+    
+    // for all codes be it diag, proce, read, move in pending codes,
+    //  find in prob csv first of all
+    // if we find it , attach
+    // else follow default behaviour
+
+    // if we have empty csv ? no record length of csv is 0
+    // will send empty array and boolean will be sent, nocsv = true ,
+    //  means no csv exists, it doesnt go to attach, only create or read code
 };

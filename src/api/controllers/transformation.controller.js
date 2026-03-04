@@ -79,6 +79,16 @@ const validateTransformationInput = (inputData) => {
 const formatTransformationResponse = (res, output, meta) => {
   /** if kill property found, then storing it with output */
   if (output && output.isKilled === true) {
+
+    if (output.field) {
+      const formatted =
+        "Letter is detected with " +
+        output.field.charAt(0).toUpperCase() +
+        output.field.slice(1);
+
+      output.field = formatted;
+    }
+
     logger.warn("Transformation terminated.", { output, functionName: "formatTransformationResponse" });
 
     return res.status(200).json({
