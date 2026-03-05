@@ -18,6 +18,7 @@ export const getFeatures = (inputData, rules, context, sectionKey) => {
         search_codes_in_problems: getFeature("search_codes_in_problems", false),
         override_bilateral: getFeature("override_bilateral", false),
         link_diabetic_problem: getFeature("link_diabetic_problem", false),
+        no_problem_csv_found: isTrue(inputData?.NoProblemCSVFound),
     };
     
     // for all codes be it diag, proce, read, move in pending codes,

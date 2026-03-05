@@ -131,32 +131,64 @@ export const processProblemAttachments = (
     features = {},
 ) => {
     logger.info("FULL CONTEXT OBJECT RECEIVED", {
-            context,
-            contextKeys: Object.keys(context || {})
-        });
-    const logMeta = { sectionKey, functionName: "processProblemAttachments" };
+        context,
+        contextKeys: Object.keys(context || {})
+    });
 
-    // Log the received problemsCsv for debugging
+    const logMeta = { sectionKey, functionName: "processProblemAttachments" };
     logger.info("problemsCsv received", { ...logMeta, problemsCsv });
 
-    // Type guard: if problemsCsv is a single object and not an array, convert it to an array
-    if (problemsCsv && !Array.isArray(problemsCsv) && typeof problemsCsv === "object") {
-        problemsCsv = [problemsCsv];
+    // ================================
+    // FORCE FALLBACK MODE
+    // ================================
+    if (features?.no_problem_csv_found === true) {
+        logger.info("NoProblemCSVFound flag detected. Skipping CSV matching.", logMeta);
+
+        results.download_problems_csv = false;
+
+        pendingProblemAttachments.forEach(
+            ({ childCode, codeData, allowProblemCreation, allowReadCodeSpecial }) => {
+                if (allowReadCodeSpecial) {
+                    results.readCodes.push(
+                        buildReadCodeObj(codeData, rules, context, sectionKey, childCode)
+                    );
+                } else if (allowProblemCreation) {
+                    results.createProblems.push(
+                        buildCreateProblemObj(codeData, rules, context, sectionKey, childCode)
+                    );
+                }
+            }
+        );
+
+        return;
     }
 
-    /**
-     * If csv is present, but there's no problem in it. 
-     * This likely means user has removed all problems from csv after first request. 
-     * In this case, we should not attempt to match any codes and directly move them to pending resolution again,
-     * instead of creating/attaching problems based on stale csv data.
-     * This is a critical fix to prevent incorrect problem attachments or creations based on outdated csv inputs.
-     */
-    const needsCsv =
-    pendingProblemAttachments.length > 0 ||
-    features.link_diabetic_problem === true;
+    // ================================
+    // NORMALIZE CSV INPUT
+    // ================================
+    if (problemsCsv && !Array.isArray(problemsCsv) && typeof problemsCsv === "object") {
+        problemsCsv = Object.keys(problemsCsv).length === 0 ? [] : [problemsCsv];
+    }
 
+    const needsCsv =
+        pendingProblemAttachments.length > 0 ||
+        features.link_diabetic_problem === true;
+
+    // const isPendingResolutionMode =
+    //     context?.originalInput?.is_pending_resolution === true;
+
+    // ================================
+    // CSV MISSING OR EMPTY
+    // ================================
     if (!problemsCsv || problemsCsv.length === 0) {
-        if (needsCsv) {
+
+        logger.info("CSV empty or missing", {
+            ...logMeta,
+            isPendingResolutionMode
+        });
+
+        // First pass => request CSV
+        if (needsCsv && !context?.originalInput?.is_pending_resolution) {
             results.download_problems_csv = true;
 
             results.pendingCodes = pendingProblemAttachments.map((p) => ({
@@ -166,27 +198,41 @@ export const processProblemAttachments = (
                 allowReadCodeSpecial: p.allowReadCodeSpecial,
             }));
 
-            logger.info(
-                `Problem CSV missing. Requesting CSV for ${needsCsv ? "matching flow" : "unknown"}.`,
-                logMeta
-            );
-
+            logger.info("Problem CSV missing. Requesting CSV.", logMeta);
             return;
         }
+
+        // Pending resolution → fallback directly
+        logger.info("Pending resolution mode. Falling back.", logMeta);
+
+        pendingProblemAttachments.forEach(
+            ({ childCode, codeData, allowProblemCreation, allowReadCodeSpecial }) => {
+                if (allowReadCodeSpecial) {
+                    results.readCodes.push(
+                        buildReadCodeObj(codeData, rules, context, sectionKey, childCode)
+                    );
+                } else if (allowProblemCreation) {
+                    results.createProblems.push(
+                        buildCreateProblemObj(codeData, rules, context, sectionKey, childCode)
+                    );
+                }
+            }
+        );
+
+        return;
     }
 
-    // Preprocess the CSV data to add computed fields
+    // ================================
+    // PREPROCESS CSV
+    // ================================
     const preprocessedCsv = preprocessProblemsCsv(problemsCsv, rules);
-logger.info("=== CONTEXT DEBUG START ===", {
-    fullContext: context,
-    hasContext: !!context,
-    letterTypeRaw: context?.letter_type,
-    letterTypeType: typeof context?.letter_type,
-    letterTypeTrimmed: context?.letter_type?.trim?.(),
-    letterTypeNormalized: context?.letter_type?.trim?.().toLowerCase?.(),
-    featureFlagRaw: features?.link_diabetic_problem,
-    featureFlagType: typeof features?.link_diabetic_problem,
-});
+
+    logger.info("=== CONTEXT DEBUG START ===", {
+        fullContext: context,
+        letterTypeNormalized: context?.letter_type?.trim?.().toLowerCase?.(),
+        featureFlag: features?.link_diabetic_problem,
+    });
+
     // ============================
     // Special Feature: Link Diabetic Problems
     // ============================
@@ -226,9 +272,9 @@ logger.info("=== CONTEXT DEBUG START ===", {
             logMetaSpecial
         );
     }
-
-    //we make above thing as a function,  
-    //this is for problem checking ,  we have to let it run this as well after checking diabetic codes
+    // ================================
+    // NORMAL MATCHING
+    // ================================
     pendingProblemAttachments.forEach(
         ({ childCode, codeData, allowProblemCreation, allowReadCodeSpecial }) => {
             const rowLogMeta = { ...logMeta, fieldKey: childCode };
