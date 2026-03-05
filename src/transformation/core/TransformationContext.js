@@ -1,5 +1,9 @@
 import logger from "../../shared/logger.js";
-import { isEmpty, cleanObject, resolveDeep } from "../../shared/utils/generalUtils.js";
+import {
+  isEmpty,
+  cleanObject,
+  resolveDeep,
+} from "../../shared/utils/generalUtils.js";
 import { isUnifiedValue } from "../utils/transformationUtils.js";
 
 // ==================
@@ -7,7 +11,7 @@ import { isUnifiedValue } from "../utils/transformationUtils.js";
 // ==================
 export class TransformationContext {
   constructor(inputData) {
-    this.originalInput = inputData;
+    this.contextInput = inputData;
     this.candidates = new Map();
     this.recipient_notes = [];
     this.killResult = null;
@@ -39,7 +43,14 @@ export class TransformationContext {
       return;
     }
 
-    const resolvedValue = resolveDeep(value, this.originalInput, {}, fieldKey, this, sectionKey);
+    const resolvedValue = resolveDeep(
+      value,
+      this.contextInput,
+      {},
+      fieldKey,
+      this,
+      sectionKey,
+    );
 
     this.candidates.get(fieldKey).push({
       value: resolvedValue,
@@ -103,10 +114,14 @@ export class TransformationContext {
   setKilled(result, sectionKey = "", fieldKey = "") {
     if (!this.killResult) {
       this.killResult = result;
-      const logMeta = { sectionKey, functionName: "setKilled", fieldKey: fieldKey || result.field };
+      const logMeta = {
+        sectionKey,
+        functionName: "setKilled",
+        fieldKey: fieldKey || result.field,
+      };
       logger.warn(
         `Transformation KILLED by ${result.field || "unknown"}.`,
-        logMeta
+        logMeta,
       );
     }
   }
@@ -143,7 +158,7 @@ export class TransformationContext {
       return this.killResult;
     }
 
-    const output = { ...this.originalInput };
+    const output = { ...this.contextInput };
     // Looking for the first truthy winner value and passing it to output
     for (const [key, candidates] of this.candidates.entries()) {
       const winner = this._pickWinner(candidates);
@@ -174,7 +189,13 @@ export class TransformationContext {
   applyDefaultOutputs(output) {
     if (output && output.isKilled) return output;
 
-    const defaults = ["department", "metrics", "readCodes", "createProblems", "attachProblems"];
+    const defaults = [
+      "department",
+      "metrics",
+      "readCodes",
+      "createProblems",
+      "attachProblems",
+    ];
     defaults.forEach((field) => {
       if (!output.hasOwnProperty(field)) {
         output[field] = field === "department" ? "" : [];

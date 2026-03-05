@@ -63,3 +63,9 @@ If all conditions in a clause are met, an `outcome` object is returned to the ha
 - **`notes`**: Additional metadata added to a global notes array in the transformation response.
 - **`isKilled`**: If true, the entire transformation stops immediately, and a "kill status" is returned.
 - **`matrixAssignments`**: A set of additional key-value pairs to be added to the final JSON alongside the primary field.
+
+## CMD to Host using PM2:
+Open the exact folder in cmd and run these commands:
+- npm i
+- pm2 start ecosystem.config.cjs --name transformer --env production
+- pm2 save

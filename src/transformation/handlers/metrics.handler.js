@@ -135,6 +135,7 @@ const executeMetricTransformation = (
 
   const rawValue = inputMetrics[metricKey];
 
+  // localContext
   const rowContext = {
     ...processedRow,
     metricName,

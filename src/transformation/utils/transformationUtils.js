@@ -90,7 +90,7 @@ export const processUnifiedValue = (fieldKey, unifiedObj, context, localTarget =
 
         if (localTarget) {
             if (isWinnerTruthy) {
-                finalDepValue = resolveDeep(depValue, context?.originalInput || {}, localTarget, depKey, context, sectionKey, depKey);
+                finalDepValue = resolveDeep(depValue, context?.contextInput || {}, localTarget, depKey, context, sectionKey, depKey);
             }
             localTarget[depKey] = finalDepValue;
             logger.info(

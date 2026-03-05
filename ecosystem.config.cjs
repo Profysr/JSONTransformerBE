@@ -10,10 +10,10 @@ module.exports = {
       },
       env_production: {
         PORT: 5000,
-        NODE_ENV: 'production',
-        SHARY_USERNAME: 'automation_server@kynoby.com',
-        SHARY_PASSWORD: 'a78678600',
-        SHARY_API_URL: 'https://sharybeautomation-9qrox.kinsta.app'
+        NODE_ENV: "production",
+        SHARY_USERNAME: "automation_server@kynoby.com",
+        SHARY_PASSWORD: "a78678600",
+        SHARY_API_URL: "https://sharybeautomation-9qrox.kinsta.app"
       },
     },
   ],

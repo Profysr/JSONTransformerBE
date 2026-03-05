@@ -153,3 +153,6 @@ export const processTableRules = (inputData, tableConfig, options = {}) => {
   if (results.length > 0) logger.info(`Processed ${results.length} rows successfully.`, { sectionKey, functionName: "processTableRules" });
   return results;
 };
+
+
+// 

@@ -21,7 +21,6 @@ export const fetchConfigRules = async (inst_id, letter_type) => {
     letter_type: letter_type,
   };
 
-
   try {
     const result = await makeRequestWithRetry(
       () => getAccessToken("shary_prod"),
@@ -31,13 +30,13 @@ export const fetchConfigRules = async (inst_id, letter_type) => {
       {
         maxAttempts: 3,
         retryDelay: 3000,
-        logPrefix: `Fetching Config Rules for ${inst_id} and ${letter_type}`
-      }
+        logPrefix: `Fetching Config Rules for ${inst_id} and ${letter_type}`,
+      },
     );
 
     logger.info(
       `Successfully retrieved configuration rules for '${inst_id}' [${letter_type}].`,
-      { functionName: "fetchConfigRules" }
+      { functionName: "fetchConfigRules" },
     );
 
     /** Extracting data and passing it to next function to normalize */
@@ -46,10 +45,12 @@ export const fetchConfigRules = async (inst_id, letter_type) => {
 
     return configRules;
   } catch (error) {
-    logger.warn(`Failed to fetch config rules: ${error.message}`, { functionName: "fetchConfigRules" });
+    logger.warn(`Failed to fetch config rules: ${error.message}`, {
+      functionName: "fetchConfigRules",
+    });
     return new ErrorHandler(
       500,
-      `Failed to fetch config rules: ${error.message}`
+      `Failed to fetch config rules: ${error.message}`,
     );
   }
 };
@@ -66,7 +67,7 @@ const validateTransformationInput = (inputData) => {
   ) {
     return new ErrorHandler(
       400,
-      "Invalid or empty input data provided. Please provide a valid JSON object."
+      "Invalid or empty input data provided. Please provide a valid JSON object.",
     );
   }
   return null;
@@ -79,7 +80,6 @@ const validateTransformationInput = (inputData) => {
 const formatTransformationResponse = (res, output, meta) => {
   /** if kill property found, then storing it with output */
   if (output && output.isKilled === true) {
-
     if (output.field) {
       const formatted =
         "Letter is detected with " +
@@ -89,7 +89,10 @@ const formatTransformationResponse = (res, output, meta) => {
       output.field = formatted;
     }
 
-    logger.warn("Transformation terminated.", { output, functionName: "formatTransformationResponse" });
+    logger.warn("Transformation terminated.", {
+      output,
+      functionName: "formatTransformationResponse",
+    });
 
     return res.status(200).json({
       success: false,
@@ -102,7 +105,8 @@ const formatTransformationResponse = (res, output, meta) => {
 
   return res.status(200).json({
     success: true,
-    message: "Data successfully transformed according to client-specific rules.",
+    message:
+      "Data successfully transformed according to client-specific rules.",
     isKilled: false,
     ...meta,
     output,
@@ -127,19 +131,26 @@ export const processTransformation = catchAsyncHandler(
 
     let meta = { inst_id, letter_type, nhs_id, letter_id };
     logger.info("Incoming transformation request received.", {
-      ...meta
+      ...meta,
     });
 
     try {
       const validationError = validateTransformationInput(inputData);
       if (validationError) return next(validationError);
 
-      logger.info(`Fetching automation rules for institution '${inst_id}' and letter type '${letter_type}'...`);
+      logger.info(
+        `Fetching automation rules for institution '${inst_id}' and letter type '${letter_type}'...`,
+      );
       const configRules = await fetchConfigRules(inst_id, letter_type);
 
       if (!configRules || Object.keys(configRules).length === 0) {
         logger.error("No configuration rules found", { inst_id, letter_type });
-        return next(new ErrorHandler(404, `No configuration rules found for inst_id: ${inst_id} and letter_type: ${letter_type}`));
+        return next(
+          new ErrorHandler(
+            404,
+            `No configuration rules found for inst_id: ${inst_id} and letter_type: ${letter_type}`,
+          ),
+        );
       }
 
       const output = transformationEngine(inputData, configRules);
@@ -156,18 +167,18 @@ export const processTransformation = catchAsyncHandler(
       logger.error("Transformation Execution Error:", {
         error: error.message,
         stack: error.stack,
-        ...meta
+        ...meta,
       });
       return next(
         new ErrorHandler(
           500,
-          `Transformation failed: ${error.message || "An internal error prevented the data transformation."}`
-        )
+          `Transformation failed: ${error.message || "An internal error prevented the data transformation."}`,
+        ),
       );
     } finally {
       await logger.sendLogs(apiEndpoint, letter_type, nhs_id, letter_id);
     }
-  }
+  },
 );
 
 // ==================
@@ -177,21 +188,20 @@ export const findExistingProblems = catchAsyncHandler(
   async (req, res, next) => {
     const { inst_id } = req.params;
     const inputData = req.body || {};
-  // Validate problems_csv type (must be object or array, not string/null/number)
-  if (
-    inputData.problems_csv !== undefined &&
-    (
-      typeof inputData.problems_csv !== "object" ||
-      inputData.problems_csv === null
-    )
-  ) {
-    return next(
-      new ErrorHandler(
-        400,
-        "Invalid data type: 'problems_csv' must be an object or an array."
-      )
-    );
-  }
+    // Validate problems_csv type (must be object or array, not string/null/number)
+    if (
+      inputData.problems_csv !== undefined &&
+      (typeof inputData.problems_csv !== "object" ||
+        inputData.problems_csv === null)
+    ) {
+      return next(
+        new ErrorHandler(
+          400,
+          "Invalid data type: 'problems_csv' must be an object or an array.",
+        ),
+      );
+    }
+    
     const letter_type = inputData?.letter_type;
 
     logger.info("Received Problem Resolution request:", {
@@ -211,13 +221,22 @@ export const findExistingProblems = catchAsyncHandler(
       /** if sheroz bhii add section based filtering, we can solely fetched e2e_config from backend directly */
       const configRules = await fetchConfigRules(inst_id, letter_type);
       if (!configRules || Object.keys(configRules).length === 0) {
-        return next(new ErrorHandler(404, `No configuration rules found for inst_id: ${inst_id}`));
+        return next(
+          new ErrorHandler(
+            404,
+            `No configuration rules found for inst_id: ${inst_id}`,
+          ),
+        );
       }
-
 
       const filteredRules = configRules.e2e_config_json;
       if (!filteredRules || Object.keys(filteredRules).length === 0) {
-        return next(new ErrorHandler(404, "Read Codes configuration (e2e_config_json) not found in rules."));
+        return next(
+          new ErrorHandler(
+            404,
+            "Read Codes configuration (e2e_config_json) not found in rules.",
+          ),
+        );
       }
 
       const context = new TransformationContext(inputData);
@@ -234,8 +253,16 @@ export const findExistingProblems = catchAsyncHandler(
         output,
       });
     } catch (error) {
-      logger.error("Problem Resolution Error:", { error: error.message, stack: error.stack, functionName: "processProblemResolution", inst_id, letter_type });
-      return next(new ErrorHandler(500, `Problem Resolution failed: ${error.message}`));
+      logger.error("Problem Resolution Error:", {
+        error: error.message,
+        stack: error.stack,
+        functionName: "processProblemResolution",
+        inst_id,
+        letter_type,
+      });
+      return next(
+        new ErrorHandler(500, `Problem Resolution failed: ${error.message}`),
+      );
     }
-  }
+  },
 );

@@ -72,6 +72,7 @@ const handlePendingCodes = (inputData, rules, context, sectionKey, results) => {
   const logMeta = { sectionKey, functionName: "handlePendingCodes" };
   const pendingCodes = inputData.pendingCodes || [];
   const problemsCsv = inputData.problems_csv || [];
+  const NoProblemCSVFound = inputData.NoProblemCSVFound || false; 
 
   logger.info(`Optimized path: Processing ${pendingCodes.length} pending codes.`, logMeta);
 
@@ -83,7 +84,8 @@ const handlePendingCodes = (inputData, rules, context, sectionKey, results) => {
     rules,
     context,
     sectionKey,
-    getFeatures(inputData, rules, context, sectionKey)
+    getFeatures(inputData, rules, context, sectionKey),
+    NoProblemCSVFound,
   );
 };
 
