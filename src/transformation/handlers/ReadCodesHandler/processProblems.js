@@ -193,7 +193,7 @@ export const processProblemAttachments = (
   // ================================
   // FORCE FALLBACK MODE ✅
   // ================================
-  if (NoProblemCSVFound == true) {
+  if (NoProblemCSVFound == true || NoProblemCSVFound == "true") {
     logger.info(
       "NoProblemCSVFound flag detected. Skipping CSV matching.",
       logMeta,
@@ -245,10 +245,10 @@ export const processProblemAttachments = (
 
     const needsCsv =
       pendingProblemAttachments.length > 0 ||
-      features.link_diabetic_problem == true;
+      features.link_diabetic_problem == true || features.link_diabetic_problem == "true";
 
     const isPendingResolutionMode =
-      context?.contextInput?.is_pending_resolution === true;
+      context?.contextInput?.is_pending_resolution === true || context?.contextInput?.is_pending_resolution === "true";
 
     // First pass => request CSV
     if (needsCsv && isPendingResolutionMode) {
